@@ -1,0 +1,12 @@
+#!/usr/bin/env python
+
+import os
+import methods
+
+Import('env')
+Import('env_modules')
+
+env_videodecoder_gdnative = env_modules.Clone()
+
+env_videodecoder_gdnative.Append(CPPPATH=['#modules/gdnative/include/'])
+env_videodecoder_gdnative.add_source_files(env.modules_sources, '*.cpp')

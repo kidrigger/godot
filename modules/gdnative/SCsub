@@ -16,6 +16,7 @@ gdn_env.Append(CPPPATH=['#modules/gdnative/include/'])
 SConscript("net/SCsub")
 SConscript("arvr/SCsub")
 SConscript("pluginscript/SCsub")
+SConscript("videodecoder/SCsub")
 
 from platform_methods import run_in_subprocess
 import gdnative_builders

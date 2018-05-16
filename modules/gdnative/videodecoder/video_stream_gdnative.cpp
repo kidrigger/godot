@@ -30,51 +30,98 @@
 
 #include "video_stream_gdnative.h"
 
-void VideoStreamGDNative::stop() {
-    instance->stop();
-}
-void VideoStreamGDNative::play() {
-    instance->play();
+VideoStreamPlaybackGDNative::VideoStreamPlaybackGDNative() {
+
+    print_line("Contructing VSGDN");
 }
 
-bool VideoStreamGDNative::is_playing() {
-    return instance->is_playing();
+VideoStreamPlaybackGDNative::~VideoStreamPlaybackGDNative() {
+
+    print_line("Destroying VSGDN");
+
 }
 
-void VideoStreamGDNative::set_paused(bool p_paused) {
-    instance->set_paused(p_paused);
-}
-bool VideoStreamGDNative::is_paused() {
-    return instance->is_paused();
+void VideoStreamPlaybackGDNative::cleanup() {
+    print_line("cleanup");
 }
 
-void VideoStreamGDNative::set_loop(bool p_enable) {
-    instance->set_loop(p_enable);
-}
-bool VideoStreamGDNative::has_loop() {
-    return instance->has_loop();
+void VideoStreamPlaybackGDNative::set_interface(const godot_video_stream_playback_interface_gdnative* p_interface) {
+    print_line("set interface");
 }
 
-float VideoStreamGDNative::get_length() {
-    return instance->get_length;
+bool VideoStreamPlaybackGDNative::is_initialized() {
+	print_line("check interface");
+    return false;
 }
 
-float VideoStreamGDNative::get_playback_position() {
-    return instance->get_playback_position;
-}
-void VideoStreamGDNative::seek(float p_time) {
-    instance->seek(p_time);
+void VideoStreamPlaybackGDNative::stop() {
+    print_line("Stop");
+    playing = false;
 }
 
-void VideoStreamGDNative::set_audio_track(int p_idx) {
-    instance->set_audio_track(p_idx);
+void VideoStreamPlaybackGDNative::play() {
+    print_line("Play");
+    playing = true;
 }
 
-Ref<Texture> VideoStreamGDNative::get_texture() {
-    instance->get_texture();
+bool VideoStreamPlaybackGDNative::is_playing() {
+    print_line("is_playing");
+    return playing;
 }
-void VideoStreamGDNative::update(float p_delta);
 
-void VideoStreamGDNative::set_mix_callback(AudioMixCallback p_callback, void *p_userdata) = 0;
-int VideoStreamGDNative::get_channels();
-int VideoStreamGDNative::get_mix_rate();
+void VideoStreamPlaybackGDNative::set_paused(bool p_paused) {
+    print_line("is_playing");
+    paused = p_paused;
+}
+bool VideoStreamPlaybackGDNative::is_paused() {
+    print_line("is_paused");
+    return paused;
+}
+
+void VideoStreamPlaybackGDNative::set_loop(bool p_enable) {
+    print_line("set_loop");
+    looping = p_enable;
+}
+bool VideoStreamPlaybackGDNative::has_loop() {
+    print_line("has_loop");
+    return looping;
+}
+
+float VideoStreamPlaybackGDNative::get_length() {
+    print_line("get_length");
+    return 0;
+}
+
+float VideoStreamPlaybackGDNative::get_playback_position() {
+    print_line("get_playback_position");
+    return 0;
+}
+void VideoStreamPlaybackGDNative::seek(float p_time) {
+    print_line("seek");
+}
+
+void VideoStreamPlaybackGDNative::set_audio_track(int p_idx) {
+    print_line("Set audio track");
+}
+
+Ref<Texture> VideoStreamPlaybackGDNative::get_texture() {
+    return Ref<Texture>();
+}
+
+void VideoStreamPlaybackGDNative::update(float p_delta) {
+    print_line("Updated");
+}
+
+void VideoStreamPlaybackGDNative::set_mix_callback(AudioMixCallback p_callback, void *p_userdata) {
+    print_line("set_mix_callback");
+}
+
+int VideoStreamPlaybackGDNative::get_channels() {
+    print_line("get_channels");
+    return 0;
+}
+
+int VideoStreamPlaybackGDNative::get_mix_rate() {
+    print_line("Get mix rate");
+    return 5;
+}

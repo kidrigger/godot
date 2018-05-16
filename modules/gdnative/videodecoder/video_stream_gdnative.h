@@ -32,6 +32,7 @@
 #define VIDEO_STREAM_GDNATIVE_H
 
 #include "scene/resources/video_stream.h"
+#include "modules/gdnative/gdnative.h"
 
 /*
  * TODO: Relocate the struct
@@ -57,10 +58,10 @@ typedef struct {
     Ref<Texture> (*get_texture)(void *);
 	void (*update)(void *, godot_real);
     // TODO: AudioMixCallback
-    void (*set_mix_callback)(AudioMixCallback, void*);
+    void (*set_mix_callback)(void *, VideoStreamPlayback::AudioMixCallback);
     int (*get_channels)(void *);
     int (*get_mix_rate)(void *);
-} video_stream_playback_interface;
+} godot_video_stream_playback_interface_gdnative;
 #ifdef __cplusplus
 }
 #endif
@@ -71,40 +72,54 @@ class VideoStreamPlaybackGDNative : public VideoStreamPlayback {
 
 	GDCLASS(VideoStreamPlaybackGDNative, VideoStreamPlayback)
 
+    bool playing;
+    bool paused;
+    bool looping;
+
+    void cleanup();
+
 protected:
     static void _bind_methods();
-    const video_stream_playback_interface* instance;
+    const godot_video_stream_playback_interface_gdnative* instance;
+    void* data;
 
 public:
 
-    virtual void stop();
-    virtual void play();
+    void set_interface(const godot_video_stream_playback_interface_gdnative *p_interface);
+    bool is_initialized();
 
-    virtual bool is_playing();
+    void stop();
+    void play();
 
-    virtual void set_paused(bool p_paused);
-    virtual bool is_paused();
+    bool is_playing();
 
-    virtual void set_loop(bool p_enable);
-    virtual bool has_loop();
+    void set_paused(bool p_paused);
+    bool is_paused();
 
-    virtual float get_length();
+    void set_loop(bool p_enable);
+    bool has_loop();
 
-    virtual float get_playback_position();
-    virtual void seek(float p_time);
+    float get_length();
 
-    virtual void set_audio_track(int p_idx);
+    float get_playback_position();
+    void seek(float p_time);
+
+    void set_audio_track(int p_idx);
 
     //virtual int mix(int16_t* p_buffer,int p_frames)=0;
 
-    virtual Ref<Texture> get_texture();
-    virtual void update(float p_delta);
+    Ref<Texture> get_texture();
+    void update(float p_delta);
 
-    virtual void set_mix_callback(AudioMixCallback p_callback, void *p_userdata) = 0;
-    virtual int get_channels();
-    virtual int get_mix_rate();
+    void set_mix_callback(AudioMixCallback p_callback, void *p_userdata);
+    int get_channels();
+    int get_mix_rate();
+
+    bool open_file(const String& p_file);
+    bool close_file();
 
     VideoStreamPlaybackGDNative();
+    ~VideoStreamPlaybackGDNative();
 };
 
 /**/
@@ -114,11 +129,12 @@ class VideoStreamGDNative : public VideoStream {
 	GDCLASS(VideoStreamGDNative, VideoStream);
     OBJ_SAVE_TYPE(VideoStreamGDNative); //children are all saved as AudioStream, so they can be exchanged
 
-    public:
-    virtual void set_audio_track(int p_track) = 0;
-    virtual Ref<VideoStreamPlaybackGDNative> instance_playback() = 0;
+public:
+    virtual void set_audio_track(int p_track);
+    virtual Ref<VideoStreamPlayback> instance_playback();
 
-    VideoStreamGDNative() {}
+    VideoStreamGDNative();
+    ~VideoStreamGDNative();
 };
 
 #endif // VIDEO_STREAM_GDNATIVE_H
