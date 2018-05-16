@@ -14,6 +14,7 @@ gdn_env.Append(CPPPATH=['#modules/gdnative/include/'])
 
 SConscript("arvr/SCsub")
 SConscript("pluginscript/SCsub")
+SConscript("videodecoder/SCsub")
 
 def _spaced(e):
     return e if e[-1] == '*' else e + ' '
@@ -73,7 +74,7 @@ def _build_gdnative_api_struct_header(api):
         ret_val = []
         if ext['next']:
             ret_val += generate_extension_struct(name, ext['next'])
-        
+
         ret_val += [
             'typedef struct godot_gdnative_ext_' + name + ('' if not include_version else ('_{0}_{1}'.format(ext['version']['major'], ext['version']['minor']))) + '_api_struct {',
             '\tunsigned int type;',
