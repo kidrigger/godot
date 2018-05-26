@@ -31,22 +31,33 @@
 #ifndef VIDEO_STREAM_FFMPEG_H
 #define VIDEO_STREAM_FFMPEG_H
 
+#include "modules/gdnative/videodecoder/ffmpeg/include/libavformat/avformat.h"
+#include "os/file_access.h"
 #include "scene/resources/texture.h"
+#include "scene/resources/video_stream.h"
 
-class VideoStreamPlaybackFFMPEG : public Resource {
+class VideoStreamPlaybackFFMPEG : public VideoStreamPlayback {
 
 	GDCLASS(VideoStreamPlaybackFFMPEG, VideoStreamPlayback);
+
+	FileAccess *file;
+
+	bool playing;
+	bool paused;
+
+	AVIOContext *pIOCtx;
+	AVFormatContext *pFormatCtx;
 
 protected:
 	static void _bind_methods();
 
-    String file_name;
+	String file_name;
 
 public:
-    VideoStreamPlaybackFFMPEG();
-    ~VideoStreamPlaybackFFMPEG();
+	VideoStreamPlaybackFFMPEG();
+	~VideoStreamPlaybackFFMPEG();
 
-    bool open_file(const String& p_file);
+	bool open_file(const String &p_file);
 
 	typedef int (*AudioMixCallback)(void *p_udata, const float *p_data, int p_frames);
 
@@ -76,11 +87,9 @@ public:
 	virtual void set_mix_callback(AudioMixCallback p_callback, void *p_userdata);
 	virtual int get_channels() const;
 	virtual int get_mix_rate() const;
-
-	VideoStreamPlayback();
 };
 
-class VideoStreamFFMPEG : public Resource {
+class VideoStreamFFMPEG : public VideoStream {
 
 	GDCLASS(VideoStreamFFMPEG, VideoStream);
 	RES_BASE_EXTENSION("ffmpegstr"); //children are all saved as AudioStream, so they can be exchanged
@@ -89,7 +98,7 @@ public:
 	virtual void set_audio_track(int p_track);
 	virtual Ref<VideoStreamPlayback> instance_playback();
 
-	VideoStream() {}
+	VideoStreamFFMPEG() {}
 };
 
 #endif
