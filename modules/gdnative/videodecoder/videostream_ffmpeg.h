@@ -32,6 +32,7 @@
 #define VIDEO_STREAM_FFMPEG_H
 
 #include "modules/gdnative/videodecoder/ffmpeg/include/libavformat/avformat.h"
+#include "modules/gdnative/videodecoder/ffmpeg/include/libswscale/swscale.h"
 #include "os/file_access.h"
 #include "scene/resources/texture.h"
 #include "scene/resources/video_stream.h"
@@ -42,11 +43,28 @@ class VideoStreamPlaybackFFMPEG : public VideoStreamPlayback {
 
 	FileAccess *file;
 
+	float time;
+
 	bool playing;
 	bool paused;
 
 	AVIOContext *pIOCtx;
 	AVFormatContext *pFormatCtx;
+	AVCodecContext *pCodecCtx;
+	AVFrame *pFrameYUV;
+	AVFrame *pFrameRGB;
+
+	SwsContext *sws_ctx;
+
+	Vector<uint8_t> frame_buffer;
+
+	AVPacket packet;
+
+	int videostream_idx;
+
+	void cleanup();
+
+	void send_frame();
 
 protected:
 	static void _bind_methods();
