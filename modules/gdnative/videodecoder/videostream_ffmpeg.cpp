@@ -30,6 +30,9 @@
 
 #include "videostream_ffmpeg.h"
 
+#include "modules/gdnative/videodecoder/ffmpeg/include/libavutil/avutil.h"
+#include "modules/gdnative/videodecoder/ffmpeg/include/libavutil/imgutils.h"
+
 int ffmpeg_read_packet(void *ptr, uint8_t *buf, int buf_size) {
 	// ptr is a FileAccess
 	FileAccess *file = reinterpret_cast<FileAccess *>(ptr);
@@ -94,8 +97,8 @@ int64_t ffmpeg_seek_packet(void *ptr, int64_t pos, int whence) {
 
 bool VideoStreamPlaybackFFMPEG::open_file(const String &p_file) {
 
-	// TODO Remove all the unnecessary comments.
-	// NOTE Only meant to open file once.
+	// TODO: Remove all the unnecessary comments.
+	// NOTE: Only meant to open file once.
 
 	// If playing just err out and don't do anything
 	if (playing) {
@@ -105,10 +108,9 @@ bool VideoStreamPlaybackFFMPEG::open_file(const String &p_file) {
 	// set the file name
 	file_name = p_file;
 
-	// delete file if exists
-	if (file) {
-		memdelete(file);
-	}
+	// cleanup before starting.
+	cleanup();
+
 	// open file only for reading
 	file = FileAccess::open(p_file, FileAccess::READ);
 	// error out if nothing opens
@@ -130,6 +132,7 @@ bool VideoStreamPlaybackFFMPEG::open_file(const String &p_file) {
 	// Recognize the input format (or FFMPEG will kill the buffer by loading 5 MB : Should I try 5MB buffer?)
 	int read_bytes = file->get_buffer(buffer, buffer_size);
 	if (read_bytes < buffer_size) {
+		cleanup();
 		return false;
 	}
 
@@ -143,16 +146,158 @@ bool VideoStreamPlaybackFFMPEG::open_file(const String &p_file) {
 	pFormatCtx->flags = AVFMT_FLAG_CUSTOM_IO;
 
 	if (avformat_open_input(&pFormatCtx, "", 0, 0) != 0) {
+		cleanup();
 		return false;
 	}
+
+	if (avformat_find_stream_info(pFormatCtx, nullptr) < 0) {
+		cleanup();
+		return false;
+	}
+
+	// Find the video stream
+	for (int i = 0; i != pFormatCtx->nb_streams; i++) {
+		if (pFormatCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+			videostream_idx = i;
+		}
+	}
+	if (videostream_idx == -1) {
+		cleanup();
+		return false;
+	}
+
+	AVCodecParameters *pCodecParam = pFormatCtx->streams[videostream_idx]->codecpar;
+
+	AVCodec *pCodec = avcodec_find_decoder(pCodecParam->codec_id);
+	if (pCodec == nullptr) {
+		cleanup();
+		return false;
+	}
+
+	pCodecCtx = avcodec_alloc_context3(pCodec);
+
+	if (pCodecCtx == nullptr) {
+		cleanup();
+		return false;
+	}
+
+	avcodec_parameters_to_context(pCodecCtx, pCodecParam);
+
+	if (avcodec_open2(pCodecCtx, pCodec, nullptr) < 0) {
+		cleanup();
+		return false;
+	}
+
+	pFrameYUV = av_frame_alloc();
+	pFrameRGB = av_frame_alloc();
+
+	if (pFrameRGB == nullptr || pFrameYUV == nullptr) {
+		cleanup();
+		return false;
+	}
+
+	int numBytes = av_image_get_buffer_size(AV_PIX_FMT_RGB24, pCodecCtx->width, pCodecCtx->height, 1);
+	frame_buffer.resize(numBytes);
+
+	av_image_fill_arrays(pFrameRGB->data, pFrameRGB->linesize, frame_buffer.ptr(), AV_PIX_FMT_RGB24, pCodecCtx->width, pCodecCtx->height, 1);
+
+	sws_ctx = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt, pCodecCtx->width, pCodecCtx->height,
+			AV_PIX_FMT_RGB24, SWS_BILINEAR, nullptr, nullptr, nullptr);
 
 	return true;
 }
 
+VideoStreamPlaybackFFMPEG::VideoStreamPlaybackFFMPEG() :
+		playing(false),
+		paused(false),
+		pIOCtx(nullptr),
+		pFormatCtx(nullptr),
+		pCodecCtx(nullptr),
+		time(0.0),
+		file(nullptr) {}
+
 VideoStreamPlaybackFFMPEG::~VideoStreamPlaybackFFMPEG() {
-	avformat_close_input(&pFormatCtx);
-	av_free(pIOCtx);
+	cleanup();
+}
+
+bool VideoStreamPlaybackFFMPEG::is_playing() const {
+	return playing;
+}
+
+bool VideoStreamPlaybackFFMPEG::is_paused() const {
+	return paused;
+}
+
+void VideoStreamPlaybackFFMPEG::play() {
+
+	stop();
+
+	playing = true;
+}
+
+void VideoStreamPlaybackFFMPEG::stop() {
+	if (playing) {
+		seek(0);
+	}
+	playing = false;
+}
+
+void VideoStreamPlaybackFFMPEG::set_paused(bool p_paused) {
+	paused = p_paused;
+}
+
+void VideoStreamPlaybackFFMPEG::cleanup() {
+	if (pFrameRGB != nullptr) {
+		av_free(pFrameRGB);
+	}
+	if (pFrameYUV != nullptr) {
+		av_free(pFrameYUV);
+	}
+	if (pCodecCtx != nullptr) {
+		avcodec_close(pCodecCtx);
+		pCodecCtx = nullptr;
+	}
+	if (pFormatCtx != nullptr) {
+		avformat_close_input(&pFormatCtx);
+		pFormatCtx = nullptr;
+	}
+	if (pIOCtx != nullptr) {
+		av_free(pIOCtx);
+		pIOCtx = nullptr;
+	}
 	if (file) {
 		memdelete(file);
+		file = nullptr;
+	}
+}
+
+void VideoStreamPlaybackFFMPEG::update(float p_delta) {
+
+	if (paused || !playing) {
+		return;
+	}
+
+	time += p_delta;
+
+	if (av_read_frame(pFormatCtx, &packet) >= 0) {
+		if (packet.stream_index == videostream_idx) {
+			int x;
+			do {
+				if (avcodec_send_packet(pCodecCtx, &packet) >= 0) {
+					x = avcodec_receive_frame(pCodecCtx, pFrameYUV);
+					// Not error and not repeat
+					if (x != 0 && x != AVERROR(EAGAIN)) {
+						return;
+					} else if (x == 0) {
+						sws_scale(sws_ctx, (uint8_t const *const *)pFrameYUV->data, pFrameYUV->linesize, 0, pCodecCtx->height, pFrameRGB->data, pFrameRGB->linesize);
+
+						// TODO: Send frame to texture
+					}
+
+				} else {
+					return;
+				}
+			} while (x == AVERROR(EAGAIN));
+		}
 	}
 }
