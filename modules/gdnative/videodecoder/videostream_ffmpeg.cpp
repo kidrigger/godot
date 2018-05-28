@@ -122,15 +122,16 @@ bool VideoStreamPlaybackFFMPEG::open_file(const String &p_file) {
 
 	// TODO: Buffer length? 3KB
 	const int buffer_size = 3 * 1024;
-	uint8_t *buffer = (uint8_t *)memalloc(buffer_size);
-	pIOCtx = avio_alloc_context(buffer, buffer_size, 0, file, ffmpeg_read_packet, nullptr, ffmpeg_seek_packet);
+	io_buffer = (uint8_t *)memalloc(buffer_size);
+
+	pIOCtx = avio_alloc_context(io_buffer, buffer_size, 0, file, ffmpeg_read_packet, nullptr, ffmpeg_seek_packet);
 
 	// FFMPEG format recognition
 	pFormatCtx = avformat_alloc_context();
 	pFormatCtx->pb = pIOCtx;
 
-	// Recognize the input format (or FFMPEG will kill the buffer by loading 5 MB : Should I try 5MB buffer?)
-	int read_bytes = file->get_buffer(buffer, buffer_size);
+	// Recognize the input format (or FFMPEG will kill the io_buffer by loading 5 MB : Should I try 5MB io_buffer?)
+	int read_bytes = file->get_buffer(io_buffer, buffer_size);
 	if (read_bytes < buffer_size) {
 		cleanup();
 		return false;
@@ -138,7 +139,7 @@ bool VideoStreamPlaybackFFMPEG::open_file(const String &p_file) {
 
 	file->seek(0);
 	AVProbeData probe_data;
-	probe_data.buf = buffer;
+	probe_data.buf = io_buffer;
 	probe_data.buf_size = read_bytes;
 	probe_data.filename = "";
 	pFormatCtx->iformat = av_probe_input_format(&probe_data, 1);
@@ -196,62 +197,37 @@ bool VideoStreamPlaybackFFMPEG::open_file(const String &p_file) {
 		return false;
 	}
 
+	texture->create(pCodecCtx->width, pCodecCtx->height, Image::FORMAT_RGBA8, Texture::FLAG_FILTER | Texture::FLAG_VIDEO_SURFACE);
+
 	int numBytes = av_image_get_buffer_size(AV_PIX_FMT_RGB24, pCodecCtx->width, pCodecCtx->height, 1);
 	frame_buffer.resize(numBytes);
+	PoolVector<uint8_t>::Write w = frame_buffer.write();
 
-	av_image_fill_arrays(pFrameRGB->data, pFrameRGB->linesize, frame_buffer.ptr(), AV_PIX_FMT_RGB24, pCodecCtx->width, pCodecCtx->height, 1);
+	av_image_fill_arrays(pFrameRGB->data, pFrameRGB->linesize, w.ptr(), AV_PIX_FMT_RGB24, pCodecCtx->width, pCodecCtx->height, 1);
 
+	// For scaling TODO: Get custom sizes.
 	sws_ctx = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt, pCodecCtx->width, pCodecCtx->height,
 			AV_PIX_FMT_RGB24, SWS_BILINEAR, nullptr, nullptr, nullptr);
 
 	return true;
 }
 
-VideoStreamPlaybackFFMPEG::VideoStreamPlaybackFFMPEG() :
-		playing(false),
-		paused(false),
-		pIOCtx(nullptr),
-		pFormatCtx(nullptr),
-		pCodecCtx(nullptr),
-		time(0.0),
-		file(nullptr) {}
-
-VideoStreamPlaybackFFMPEG::~VideoStreamPlaybackFFMPEG() {
-	cleanup();
-}
-
-bool VideoStreamPlaybackFFMPEG::is_playing() const {
-	return playing;
-}
-
-bool VideoStreamPlaybackFFMPEG::is_paused() const {
-	return paused;
-}
-
-void VideoStreamPlaybackFFMPEG::play() {
-
-	stop();
-
-	playing = true;
-}
-
-void VideoStreamPlaybackFFMPEG::stop() {
-	if (playing) {
-		seek(0);
-	}
-	playing = false;
-}
-
-void VideoStreamPlaybackFFMPEG::set_paused(bool p_paused) {
-	paused = p_paused;
-}
-
 void VideoStreamPlaybackFFMPEG::cleanup() {
+
+	// All these are FFMPEG resources or file resources.
+	// Not tied to VideoPlayback.
+
+	if (sws_ctx != nullptr) {
+		sws_freeContext(sws_ctx);
+		sws_ctx = nullptr;
+	}
 	if (pFrameRGB != nullptr) {
 		av_free(pFrameRGB);
+		pFrameRGB = nullptr;
 	}
 	if (pFrameYUV != nullptr) {
 		av_free(pFrameYUV);
+		pFrameYUV = nullptr;
 	}
 	if (pCodecCtx != nullptr) {
 		avcodec_close(pCodecCtx);
@@ -260,6 +236,9 @@ void VideoStreamPlaybackFFMPEG::cleanup() {
 	if (pFormatCtx != nullptr) {
 		avformat_close_input(&pFormatCtx);
 		pFormatCtx = nullptr;
+	}
+	if (io_buffer) {
+		memdelete(io_buffer);
 	}
 	if (pIOCtx != nullptr) {
 		av_free(pIOCtx);
@@ -291,13 +270,114 @@ void VideoStreamPlaybackFFMPEG::update(float p_delta) {
 					} else if (x == 0) {
 						sws_scale(sws_ctx, (uint8_t const *const *)pFrameYUV->data, pFrameYUV->linesize, 0, pCodecCtx->height, pFrameRGB->data, pFrameRGB->linesize);
 
-						// TODO: Send frame to texture
+						Ref<Image> img = memnew(Image(pCodecCtx->width, pCodecCtx->height, 0, Image::FORMAT_RGBA8, frame_buffer));
+						texture->set_data(img);
 					}
-
 				} else {
 					return;
 				}
 			} while (x == AVERROR(EAGAIN));
 		}
+		av_packet_unref(&packet);
 	}
 }
+
+// ctor and dtor
+
+VideoStreamPlaybackFFMPEG::VideoStreamPlaybackFFMPEG() :
+		playing(false),
+		paused(false),
+		pIOCtx(nullptr),
+		pFormatCtx(nullptr),
+		pCodecCtx(nullptr),
+		time(0.0),
+		file(nullptr),
+		texture(memnew(ImageTexture)) {}
+
+VideoStreamPlaybackFFMPEG::~VideoStreamPlaybackFFMPEG() {
+	cleanup();
+}
+
+// controls
+
+bool VideoStreamPlaybackFFMPEG::is_playing() const {
+	return playing;
+}
+
+bool VideoStreamPlaybackFFMPEG::is_paused() const {
+	return paused;
+}
+
+void VideoStreamPlaybackFFMPEG::play() {
+
+	stop();
+
+	playing = true;
+}
+
+void VideoStreamPlaybackFFMPEG::stop() {
+	if (playing) {
+		seek(0);
+	}
+	playing = false;
+}
+
+void VideoStreamPlaybackFFMPEG::set_paused(bool p_paused) {
+	paused = p_paused;
+}
+
+Ref<Texture> VideoStreamPlaybackFFMPEG::get_texture() {
+	return texture;
+}
+
+bool VideoStreamPlaybackFFMPEG::has_loop() const {
+	// TODO: Implement looping.
+	return false;
+}
+
+void VideoStreamPlaybackFFMPEG::set_loop(bool p_enable) {
+	// Do nothing
+	// TODO: Do something
+}
+
+void VideoStreamPlaybackFFMPEG::set_audio_track(int p_idx) {
+	// TODO: Audio
+}
+
+/* --- NOTE VideoStreamFFMPEG starts here. ----- */
+// FIX: remove region
+#pragma region // VideoStreamFFMPEG
+
+Ref<VideoStreamPlayback> VideoStreamFFMPEG::instance_playback() {
+	Ref<VideoStreamPlaybackFFMPEG> pb = memnew(VideoStreamPlaybackFFMPEG);
+	pb->set_audio_track(audio_track);
+	if (pb->open_file(file))
+		return pb;
+	return NULL;
+}
+
+void VideoStreamFFMPEG::set_file(const String &p_file) {
+
+	file = p_file;
+}
+
+String VideoStreamFFMPEG::get_file() {
+
+	return file;
+}
+
+void VideoStreamFFMPEG::_bind_methods() {
+
+	ClassDB::bind_method(D_METHOD("set_file", "file"), &VideoStreamFFMPEG::set_file);
+	ClassDB::bind_method(D_METHOD("get_file"), &VideoStreamFFMPEG::get_file);
+
+	ADD_PROPERTY(PropertyInfo(Variant::STRING, "file", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR | PROPERTY_USAGE_INTERNAL), "set_file", "get_file");
+}
+
+void VideoStreamFFMPEG::set_audio_track(int p_track) {
+
+	audio_track = p_track;
+}
+
+// FIX remove
+#pragma endregion

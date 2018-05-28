@@ -42,9 +42,9 @@ class VideoStreamPlaybackFFMPEG : public VideoStreamPlayback {
 	GDCLASS(VideoStreamPlaybackFFMPEG, VideoStreamPlayback);
 
 	FileAccess *file;
+	Ref<ImageTexture> texture;
 
 	float time;
-
 	bool playing;
 	bool paused;
 
@@ -53,18 +53,14 @@ class VideoStreamPlaybackFFMPEG : public VideoStreamPlayback {
 	AVCodecContext *pCodecCtx;
 	AVFrame *pFrameYUV;
 	AVFrame *pFrameRGB;
-
 	SwsContext *sws_ctx;
-
-	Vector<uint8_t> frame_buffer;
-
 	AVPacket packet;
+	uint8_t *io_buffer;
 
+	PoolVector<uint8_t> frame_buffer;
 	int videostream_idx;
 
 	void cleanup();
-
-	void send_frame();
 
 protected:
 	static void _bind_methods();
@@ -72,12 +68,10 @@ protected:
 	String file_name;
 
 public:
-	VideoStreamPlaybackFFMPEG();
-	~VideoStreamPlaybackFFMPEG();
+	VideoStreamPlaybackFFMPEG(); // CLEANUP
+	~VideoStreamPlaybackFFMPEG(); // CLEANUP
 
-	bool open_file(const String &p_file);
-
-	typedef int (*AudioMixCallback)(void *p_udata, const float *p_data, int p_frames);
+	bool open_file(const String &p_file); // CLEANUP
 
 	virtual void stop();
 	virtual void play();
@@ -87,32 +81,41 @@ public:
 	virtual void set_paused(bool p_paused);
 	virtual bool is_paused() const;
 
-	virtual void set_loop(bool p_enable);
-	virtual bool has_loop() const;
+	virtual void set_loop(bool p_enable); // FIX
+	virtual bool has_loop() const; // FIX
 
-	virtual float get_length() const;
+	virtual float get_length() const; //
 
-	virtual float get_playback_position() const;
-	virtual void seek(float p_time);
+	virtual float get_playback_position() const; // TODO
+	virtual void seek(float p_time); // TODO
 
-	virtual void set_audio_track(int p_idx);
+	virtual void set_audio_track(int p_idx); // TODO
 
 	//virtual int mix(int16_t* p_buffer,int p_frames)=0;
 
 	virtual Ref<Texture> get_texture();
-	virtual void update(float p_delta);
+	virtual void update(float p_delta); // FIX CLEANUP
 
-	virtual void set_mix_callback(AudioMixCallback p_callback, void *p_userdata);
-	virtual int get_channels() const;
-	virtual int get_mix_rate() const;
+	virtual void set_mix_callback(AudioMixCallback p_callback, void *p_userdata) {} // TODO
+	virtual int get_channels() const { return 0; } // TODO
+	virtual int get_mix_rate() const { return 0; } // TODO
 };
 
 class VideoStreamFFMPEG : public VideoStream {
 
 	GDCLASS(VideoStreamFFMPEG, VideoStream);
-	RES_BASE_EXTENSION("ffmpegstr"); //children are all saved as AudioStream, so they can be exchanged
+	RES_BASE_EXTENSION("ffmpegstr");
+
+	String file;
+	int audio_track;
+
+protected:
+	static void _bind_methods();
 
 public:
+	void set_file(const String& p_file);
+	String get_file();
+
 	virtual void set_audio_track(int p_track);
 	virtual Ref<VideoStreamPlayback> instance_playback();
 
