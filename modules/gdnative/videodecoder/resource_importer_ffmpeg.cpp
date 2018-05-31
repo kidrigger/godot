@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  videostream_ffmpeg.h                                                 */
+/*  resource_importer_ffmpeg.cpp                                         */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,96 +28,62 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef VIDEO_STREAM_FFMPEG_H
-#define VIDEO_STREAM_FFMPEG_H
+#include "resource_importer_ffmpeg.h"
 
-#include "modules/gdnative/videodecoder/ffmpeg/include/libavformat/avformat.h"
-#include "modules/gdnative/videodecoder/ffmpeg/include/libswscale/swscale.h"
+#include "io/resource_saver.h"
 #include "os/file_access.h"
 #include "scene/resources/texture.h"
-#include "scene/resources/video_stream.h"
 
-class VideoStreamPlaybackFFMPEG : public VideoStreamPlayback {
+String ResourceImporterFFMPEG::get_importer_name() const {
 
-	GDCLASS(VideoStreamPlaybackFFMPEG, VideoStreamPlayback);
+	return "FFMPEG";
+}
 
-	FileAccess *file;
-	Ref<ImageTexture> texture;
+String ResourceImporterFFMPEG::get_visible_name() const {
 
-	float time;
-	bool playing;
-	bool paused;
+	return "FFMPEG";
+}
+void ResourceImporterFFMPEG::get_recognized_extensions(List<String> *p_extensions) const {
 
-	AVIOContext *pIOCtx;
-	AVFormatContext *pFormatCtx;
-	AVCodecContext *pCodecCtx;
-	AVFrame *pFrameYUV;
-	AVFrame *pFrameRGB;
-	SwsContext *sws_ctx;
-	AVPacket packet;
-	uint8_t *io_buffer;
+	p_extensions->push_back("mp4");
+}
 
-	PoolVector<uint8_t> frame_buffer;
-	int videostream_idx;
+String ResourceImporterFFMPEG::get_save_extension() const {
+	return "ffmpegstr";
+}
 
-	void cleanup();
+String ResourceImporterFFMPEG::get_resource_type() const {
 
-protected:
-	String file_name;
+	return "VideoStreamFFMPEG";
+}
 
-public:
-	VideoStreamPlaybackFFMPEG(); // CLEANUP
-	~VideoStreamPlaybackFFMPEG(); // CLEANUP
+bool ResourceImporterFFMPEG::get_option_visibility(const String &p_option, const Map<StringName, Variant> &p_options) const {
 
-	bool open_file(const String &p_file); // CLEANUP
+	return true;
+}
 
-	virtual void stop();
-	virtual void play();
+int ResourceImporterFFMPEG::get_preset_count() const {
+	return 0;
+}
+String ResourceImporterFFMPEG::get_preset_name(int p_idx) const {
 
-	virtual bool is_playing() const;
+	return String();
+}
 
-	virtual void set_paused(bool p_paused);
-	virtual bool is_paused() const;
+void ResourceImporterFFMPEG::get_import_options(List<ImportOption> *r_options, int p_preset) const {
 
-	virtual void set_loop(bool p_enable); // FIX
-	virtual bool has_loop() const; // FIX
+	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "loop"), true));
+}
 
-	virtual float get_length() const { return 1.0; } // TODO
+Error ResourceImporterFFMPEG::import(const String &p_source_file, const String &p_save_path, const Map<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files) {
 
-	virtual float get_playback_position() const { return time; }
-	virtual void seek(float p_time); // TODO
+	VideoStreamFFMPEG *stream = memnew(VideoStreamFFMPEG);
+	stream->set_file(p_source_file);
 
-	virtual void set_audio_track(int p_idx); // TODO
+	Ref<VideoStreamFFMPEG> ogv_stream = Ref<VideoStreamFFMPEG>(stream);
 
-	//virtual int mix(int16_t* p_buffer,int p_frames)=0;
+	return ResourceSaver::save(p_save_path + ".ffmpegstr", ogv_stream);
+}
 
-	virtual Ref<Texture> get_texture();
-	virtual void update(float p_delta); // FIX CLEANUP
-
-	virtual void set_mix_callback(AudioMixCallback p_callback, void *p_userdata) {} // TODO
-	virtual int get_channels() const { return 0; } // TODO
-	virtual int get_mix_rate() const { return 0; } // TODO
-};
-
-class VideoStreamFFMPEG : public VideoStream {
-
-	GDCLASS(VideoStreamFFMPEG, VideoStream);
-	RES_BASE_EXTENSION("ffmpegstr");
-
-	String file;
-	int audio_track;
-
-protected:
-	static void _bind_methods();
-
-public:
-	void set_file(const String &p_file);
-	String get_file();
-
-	virtual void set_audio_track(int p_track);
-	virtual Ref<VideoStreamPlayback> instance_playback();
-
-	VideoStreamFFMPEG() {}
-};
-
-#endif
+ResourceImporterFFMPEG::ResourceImporterFFMPEG() {
+}
