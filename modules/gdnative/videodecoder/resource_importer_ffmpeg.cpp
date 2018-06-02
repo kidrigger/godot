@@ -63,8 +63,10 @@ bool ResourceImporterFFMPEG::get_option_visibility(const String &p_option, const
 }
 
 int ResourceImporterFFMPEG::get_preset_count() const {
+
 	return 0;
 }
+
 String ResourceImporterFFMPEG::get_preset_name(int p_idx) const {
 
 	return String();
