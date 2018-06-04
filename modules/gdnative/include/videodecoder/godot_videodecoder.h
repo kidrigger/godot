@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  videostream_ffmpeg.h                                                 */
+/*  godot_videodecoder.h                                                         */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,88 +28,44 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef VIDEO_STREAM_FFMPEG_H
-#define VIDEO_STREAM_FFMPEG_H
+#ifndef GODOT_NATIVEVIDEODECODER_H
+#define GODOT_NATIVEVIDEODECODER_H
 
-#include <modules/gdnative/gdnative.h>
-#include <os/file_access.h>
-#include <scene/resources/texture.h>
-#include <scene/resources/video_stream.h>
+#include <gdnative/gdnative.h>
 
-class VideoStreamPlaybackFFMPEG : public VideoStreamPlayback {
-
-	GDCLASS(VideoStreamPlaybackFFMPEG, VideoStreamPlayback);
-
-	FileAccess *file;
-	Ref<ImageTexture> texture;
-
-	float time;
-	bool playing;
-	bool paused;
-
-	uint8_t *io_buffer;
-
-	PoolVector<uint8_t> frame_buffer;
-	int videostream_idx;
-
-	void cleanup();
-
-protected:
-	String file_name;
-
-public:
-	VideoStreamPlaybackFFMPEG(); // CLEANUP
-	~VideoStreamPlaybackFFMPEG(); // CLEANUP
-
-	bool open_file(const String &p_file); // CLEANUP
-
-	virtual void stop();
-	virtual void play();
-
-	virtual bool is_playing() const;
-
-	virtual void set_paused(bool p_paused);
-	virtual bool is_paused() const;
-
-	virtual void set_loop(bool p_enable); // FIX
-	virtual bool has_loop() const; // FIX
-
-	virtual float get_length() const { return 1.0; } // TODO
-
-	virtual float get_playback_position() const { return time; }
-	virtual void seek(float p_time); // TODO
-
-	virtual void set_audio_track(int p_idx); // TODO
-
-	//virtual int mix(int16_t* p_buffer,int p_frames)=0;
-
-	virtual Ref<Texture> get_texture();
-	virtual void update(float p_delta); // FIX CLEANUP
-
-	virtual void set_mix_callback(AudioMixCallback p_callback, void *p_userdata) {} // TODO
-	virtual int get_channels() const { return 0; } // TODO
-	virtual int get_mix_rate() const { return 0; } // TODO
-};
-
-class VideoStreamFFMPEG : public VideoStream {
-
-	GDCLASS(VideoStreamFFMPEG, VideoStream);
-	RES_BASE_EXTENSION("ffmpegstr");
-
-	String file;
-	int audio_track;
-
-protected:
-	static void _bind_methods();
-
-public:
-	void set_file(const String &p_file);
-	String get_file();
-
-	virtual void set_audio_track(int p_track);
-	virtual Ref<VideoStreamPlayback> instance_playback();
-
-	VideoStreamFFMPEG() {}
-};
-
+#ifdef __cplusplus
+extern "C" {
 #endif
+
+typedef struct
+{
+	void *(*constructor)(godot_object *);
+	void (*destructor)(void *);
+	godot_bool (*open_file)(void *, godot_string);
+	void (*stop)(void *);
+	void (*play)(void *);
+	godot_bool (*is_playing)(const void *);
+	void (*set_paused)(void *, godot_bool);
+	godot_bool (*is_paused)(const void *);
+	void (*set_loop)(void *, godot_bool p_enable);
+	godot_bool (*has_loop)(const void *);
+	godot_real (*get_length)(const void *);
+	godot_real (*get_playback_position)(const void *);
+	void (*seek)(void *, godot_real);
+	void (*set_audio_track)(void *, godot_int);
+	void *get_texture(void *); // TODO: Needs to be Ref<Texture>
+	void (*update)(void *, godot_real);
+	void set_mix_callback(void *p_callback, void *p_userdata); // TODO: Needs to be AudioMixCallback
+	godot_int (*get_channels)(const void *);
+	godot_int (*get_mix_rate)(const void *);
+} godot_videodecoder_interface_gdnative;
+
+// FileAccess wrappers for custom FFmpeg IO
+godot_int GDAPI godot_videodecoder_read_packet(void *file_ptr, uint8_t *buf, int buf_size);
+int64_t GDAPI godot_videodecoder_seek_packet(void *file_ptr, int64_t pos, int whence);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* !GODOT_NATIVEVIDEODECODER_H */
