@@ -94,209 +94,41 @@ int64_t GDAPI godot_videodecoder_seek_packet(void *ptr, int64_t pos, int whence)
 	// In case nothing works out.
 	return -1;
 }
+
+void GDAPI godot_videodecoder_register_decoder(const godot_videodecoder_interface_gdnative *p_interface) {
+	print_line("Interface registered");
+	print_line(p_interface->get_plugin_name());
+}
 }
 
 bool VideoStreamPlaybackFFMPEG::open_file(const String &p_file) {
-
-	// // TODO: Remove all the unnecessary comments.
-	// // NOTE: Only meant to open file once.
-	//
-	// // If playing just err out and don't do anything
-	// if (playing) {
-	// 	return false;
-	// }
-	//
-	// // set the file name
-	// file_name = p_file;
-	//
-	// // cleanup before starting.
-	// cleanup();
-	//
-	// // open file only for reading
-	// file = FileAccess::open(p_file, FileAccess::READ);
-	// // error out if nothing opens
-	// if (!file) {
-	// 	return false;
-	// }
-	//
-	// // FFMPEG IO
-	//
-	// // TODO: Buffer length? 3KB
-	// const int buffer_size = 3 * 1024;
-	// io_buffer = (uint8_t *)memalloc(buffer_size);
-	//
-	// pIOCtx = avio_alloc_context(io_buffer, buffer_size, 0, file, ffmpeg_read_packet, nullptr, ffmpeg_seek_packet);
-	//
-	// // FFMPEG format recognition
-	// pFormatCtx = avformat_alloc_context();
-	// pFormatCtx->pb = pIOCtx;
-	//
-	// // Recognize the input format (or FFMPEG will kill the io_buffer by loading 5 MB : Should I try 5MB io_buffer?)
-	// int read_bytes = file->get_buffer(io_buffer, buffer_size);
-	// if (read_bytes < buffer_size) {
-	// 	cleanup();
-	// 	return false;
-	// }
-	//
-	// file->seek(0);
-	// AVProbeData probe_data;
-	// probe_data.buf = io_buffer;
-	// probe_data.buf_size = read_bytes;
-	// probe_data.filename = "";
-	// pFormatCtx->iformat = av_probe_input_format(&probe_data, 1);
-	//
-	// pFormatCtx->flags = AVFMT_FLAG_CUSTOM_IO;
-	//
-	// if (avformat_open_input(&pFormatCtx, "", 0, 0) != 0) {
-	// 	cleanup();
-	// 	return false;
-	// }
-	//
-	// if (avformat_find_stream_info(pFormatCtx, nullptr) < 0) {
-	// 	cleanup();
-	// 	return false;
-	// }
-	//
-	// // Find the video stream
-	// for (int i = 0; i != pFormatCtx->nb_streams; i++) {
-	// 	if (pFormatCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
-	// 		videostream_idx = i;
-	// 	}
-	// }
-	// if (videostream_idx == -1) {
-	// 	cleanup();
-	// 	return false;
-	// }
-	//
-	// AVCodecParameters *pCodecParam = pFormatCtx->streams[videostream_idx]->codecpar;
-	//
-	// AVCodec *pCodec = avcodec_find_decoder(pCodecParam->codec_id);
-	// if (pCodec == nullptr) {
-	// 	cleanup();
-	// 	return false;
-	// }
-	//
-	// pCodecCtx = avcodec_alloc_context3(pCodec);
-	//
-	// if (pCodecCtx == nullptr) {
-	// 	cleanup();
-	// 	return false;
-	// }
-	//
-	// avcodec_parameters_to_context(pCodecCtx, pCodecParam);
-	//
-	// if (avcodec_open2(pCodecCtx, pCodec, nullptr) < 0) {
-	// 	cleanup();
-	// 	return false;
-	// }
-	//
-	// pFrameYUV = av_frame_alloc();
-	// pFrameRGB = av_frame_alloc();
-	//
-	// if (pFrameRGB == nullptr || pFrameYUV == nullptr) {
-	// 	cleanup();
-	// 	return false;
-	// }
-	//
-	// texture->create(pCodecCtx->width, pCodecCtx->height, Image::FORMAT_RGBA8, Texture::FLAG_FILTER | Texture::FLAG_VIDEO_SURFACE);
-	//
-	// int numBytes = av_image_get_buffer_size(AV_PIX_FMT_RGB24, pCodecCtx->width, pCodecCtx->height, 1);
-	// frame_buffer.resize(numBytes);
-	// PoolVector<uint8_t>::Write w = frame_buffer.write();
-	//
-	// av_image_fill_arrays(pFrameRGB->data, pFrameRGB->linesize, w.ptr(), AV_PIX_FMT_RGB24, pCodecCtx->width, pCodecCtx->height, 1);
-	//
-	// // For scaling TODO: Get custom sizes.
-	// sws_ctx = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt, pCodecCtx->width, pCodecCtx->height,
-	// 		AV_PIX_FMT_RGB24, SWS_BILINEAR, nullptr, nullptr, nullptr);
-	//
-	return true;
-}
-
-void VideoStreamPlaybackFFMPEG::cleanup() {
-
-	// // All these are FFMPEG resources or file resources.
-	// // Not tied to VideoPlayback.
-
-	// if (sws_ctx != nullptr) {
-	// 	sws_freeContext(sws_ctx);
-	// 	sws_ctx = nullptr;
-	// }
-	// if (pFrameRGB != nullptr) {
-	// 	av_free(pFrameRGB);
-	// 	pFrameRGB = nullptr;
-	// }
-	// if (pFrameYUV != nullptr) {
-	// 	av_free(pFrameYUV);
-	// 	pFrameYUV = nullptr;
-	// }
-	// if (pCodecCtx != nullptr) {
-	// 	avcodec_close(pCodecCtx);
-	// 	pCodecCtx = nullptr;
-	// }
-	// if (pFormatCtx != nullptr) {
-	// 	avformat_close_input(&pFormatCtx);
-	// 	pFormatCtx = nullptr;
-	// }
-	// if (io_buffer) {
-	// 	memdelete(io_buffer);
-	// }
-	// if (pIOCtx != nullptr) {
-	// 	av_free(pIOCtx);
-	// 	pIOCtx = nullptr;
-	// }
-	// if (file) {
-	// 	memdelete(file);
-	// 	file = nullptr;
-	// }
+	ERR_FAIL_COND_V(interface == nullptr, false);
+	file = FileAccess::open(p_file, FileAccess::READ);
+	return interface->open_file(data_struct, file);
 }
 
 void VideoStreamPlaybackFFMPEG::update(float p_delta) {
-
-	// if (paused || !playing) {
-	// 	return;
-	// }
-
-	// time += p_delta;
-
-	// if (av_read_frame(pFormatCtx, &packet) >= 0) {
-	// 	if (packet.stream_index == videostream_idx) {
-	// 		int x;
-	// 		do {
-	// 			if (avcodec_send_packet(pCodecCtx, &packet) >= 0) {
-	// 				x = avcodec_receive_frame(pCodecCtx, pFrameYUV);
-	// 				// Not error and not repeat
-	// 				if (x != 0 && x != AVERROR(EAGAIN)) {
-	// 					return;
-	// 				} else if (x == 0) {
-	// 					sws_scale(sws_ctx, (uint8_t const *const *)pFrameYUV->data, pFrameYUV->linesize, 0, pCodecCtx->height, pFrameRGB->data, pFrameRGB->linesize);
-
-	// 					Ref<Image> img = memnew(Image(pCodecCtx->width, pCodecCtx->height, 0, Image::FORMAT_RGBA8, frame_buffer));
-	// 					texture->set_data(img);
-	// 				}
-	// 			} else {
-	// 				return;
-	// 			}
-	// 		} while (x == AVERROR(EAGAIN));
-	// 	}
-	// 	av_packet_unref(&packet);
-	// }
+	if (!playing || paused) {
+		return;
+	}
+	print_line("update");
+	ERR_FAIL_COND(interface == nullptr);
+	interface->update(data_struct, p_delta);
 }
 
 // ctor and dtor
 
-VideoStreamPlaybackFFMPEG::VideoStreamPlaybackFFMPEG() {} //:
-// playing(false),
-// paused(false),
-// pIOCtx(nullptr),
-// pFormatCtx(nullptr),
-// pCodecCtx(nullptr),
-// time(0.0),
-// file(nullptr),
-// texture(memnew(ImageTexture)) {}
+VideoStreamPlaybackFFMPEG::VideoStreamPlaybackFFMPEG() :
+		texture(Ref<ImageTexture>(memnew(ImageTexture))) {
+	;
+}
 
 VideoStreamPlaybackFFMPEG::~VideoStreamPlaybackFFMPEG() {
 	// cleanup();
+}
+
+void VideoStreamPlaybackFFMPEG::set_interface(const godot_videodecoder_interface_gdnative *p_interface) {
+	interface = p_interface;
 }
 
 // controls
@@ -324,7 +156,8 @@ void VideoStreamPlaybackFFMPEG::stop() {
 }
 
 void VideoStreamPlaybackFFMPEG::seek(float p_time) {
-	// TODO
+	ERR_FAIL_COND(interface == nullptr);
+	interface->seek(data_struct, p_time);
 }
 
 void VideoStreamPlaybackFFMPEG::set_paused(bool p_paused) {
@@ -335,18 +168,45 @@ Ref<Texture> VideoStreamPlaybackFFMPEG::get_texture() {
 	return texture;
 }
 
+float VideoStreamPlaybackFFMPEG::get_length() const {
+	ERR_FAIL_COND_V(interface == nullptr, 0);
+	return interface->get_length(data_struct);
+}
+
+float VideoStreamPlaybackFFMPEG::get_playback_position() const {
+
+	ERR_FAIL_COND_V(interface == nullptr, 0);
+	return interface->get_playback_position(data_struct);
+}
+
 bool VideoStreamPlaybackFFMPEG::has_loop() const {
-	// TODO: Implement looping.
+	// TODO: Implement looping?
 	return false;
 }
 
 void VideoStreamPlaybackFFMPEG::set_loop(bool p_enable) {
 	// Do nothing
-	// TODO: Do something
 }
 
 void VideoStreamPlaybackFFMPEG::set_audio_track(int p_idx) {
-	// TODO: Audio
+	ERR_FAIL_COND(interface == nullptr);
+	interface->set_audio_track(data_struct, p_idx);
+}
+
+void VideoStreamPlaybackFFMPEG::set_mix_callback(AudioMixCallback p_callback, void *p_userdata) {
+	// TODO
+}
+
+int VideoStreamPlaybackFFMPEG::get_channels() const {
+	ERR_FAIL_COND_V(interface == nullptr, 0);
+
+	return interface->get_channels(data_struct);
+}
+
+int VideoStreamPlaybackFFMPEG::get_mix_rate() const {
+	ERR_FAIL_COND_V(interface == nullptr, 0);
+
+	return interface->get_mix_rate(data_struct);
 }
 
 /* --- NOTE VideoStreamFFMPEG starts here. ----- */

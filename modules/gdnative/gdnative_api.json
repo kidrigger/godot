@@ -10193,6 +10193,16 @@
               "whence"
             ]
           ]
+        },
+        {
+          "name": "godot_videodecoder_register_decoder",
+          "return_type": "void",
+          "arguments": [
+            [
+              "const godot_videodecoder_interface_gdnative *",
+              "p_interface"
+            ]
+          ]
         }
       ]
     }
