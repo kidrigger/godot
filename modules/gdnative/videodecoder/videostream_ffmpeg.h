@@ -40,28 +40,25 @@ class VideoStreamPlaybackFFMPEG : public VideoStreamPlayback {
 
 	GDCLASS(VideoStreamPlaybackFFMPEG, VideoStreamPlayback);
 
-	FileAccess *file;
 	Ref<ImageTexture> texture;
-
-	float time;
 	bool playing;
 	bool paused;
-
-	uint8_t *io_buffer;
-
-	PoolVector<uint8_t> frame_buffer;
-	int videostream_idx;
-
-	void cleanup();
 
 protected:
 	String file_name;
 
-public:
-	VideoStreamPlaybackFFMPEG(); // CLEANUP
-	~VideoStreamPlaybackFFMPEG(); // CLEANUP
+	FileAccess *file = nullptr;
 
-	bool open_file(const String &p_file); // CLEANUP
+	const godot_videodecoder_interface_gdnative *interface = nullptr;
+	void *data_struct = nullptr;
+
+public:
+	VideoStreamPlaybackFFMPEG();
+	~VideoStreamPlaybackFFMPEG();
+
+	void set_interface(const godot_videodecoder_interface_gdnative *p_interface);
+
+	bool open_file(const String &p_file);
 
 	virtual void stop();
 	virtual void play();
@@ -71,24 +68,24 @@ public:
 	virtual void set_paused(bool p_paused);
 	virtual bool is_paused() const;
 
-	virtual void set_loop(bool p_enable); // FIX
-	virtual bool has_loop() const; // FIX
+	virtual void set_loop(bool p_enable);
+	virtual bool has_loop() const;
 
-	virtual float get_length() const { return 1.0; } // TODO
+	virtual float get_length() const;
 
-	virtual float get_playback_position() const { return time; }
-	virtual void seek(float p_time); // TODO
+	virtual float get_playback_position() const;
+	virtual void seek(float p_time);
 
-	virtual void set_audio_track(int p_idx); // TODO
+	virtual void set_audio_track(int p_idx);
 
 	//virtual int mix(int16_t* p_buffer,int p_frames)=0;
 
 	virtual Ref<Texture> get_texture();
-	virtual void update(float p_delta); // FIX CLEANUP
+	virtual void update(float p_delta);
 
-	virtual void set_mix_callback(AudioMixCallback p_callback, void *p_userdata) {} // TODO
-	virtual int get_channels() const { return 0; } // TODO
-	virtual int get_mix_rate() const { return 0; } // TODO
+	virtual void set_mix_callback(AudioMixCallback p_callback, void *p_userdata);
+	virtual int get_channels() const;
+	virtual int get_mix_rate() const;
 };
 
 class VideoStreamFFMPEG : public VideoStream {
@@ -100,7 +97,8 @@ class VideoStreamFFMPEG : public VideoStream {
 	int audio_track;
 
 protected:
-	static void _bind_methods();
+	static void
+	_bind_methods();
 
 public:
 	void set_file(const String &p_file);
