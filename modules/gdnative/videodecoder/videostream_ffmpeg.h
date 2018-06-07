@@ -44,6 +44,8 @@ class VideoStreamPlaybackFFMPEG : public VideoStreamPlayback {
 	bool playing;
 	bool paused;
 
+	void cleanup();
+
 protected:
 	String file_name;
 
