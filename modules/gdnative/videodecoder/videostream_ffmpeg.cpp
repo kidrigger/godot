@@ -30,6 +30,8 @@
 
 #include "videostream_ffmpeg.h"
 
+static const godot_videodecoder_interface_gdnative *stat_interface = nullptr;
+
 // TODO: Put at end.
 extern "C" {
 godot_int GDAPI godot_videodecoder_read_packet(void *ptr, uint8_t *buf, int buf_size) {
@@ -98,6 +100,7 @@ int64_t GDAPI godot_videodecoder_seek_packet(void *ptr, int64_t pos, int whence)
 void GDAPI godot_videodecoder_register_decoder(const godot_videodecoder_interface_gdnative *p_interface) {
 	print_line("Interface registered");
 	print_line(p_interface->get_plugin_name());
+	stat_interface = p_interface;
 }
 }
 
@@ -111,7 +114,6 @@ void VideoStreamPlaybackFFMPEG::update(float p_delta) {
 	if (!playing || paused) {
 		return;
 	}
-	print_line("update");
 	ERR_FAIL_COND(interface == nullptr);
 	interface->update(data_struct, p_delta);
 }
@@ -215,6 +217,7 @@ int VideoStreamPlaybackFFMPEG::get_mix_rate() const {
 
 Ref<VideoStreamPlayback> VideoStreamFFMPEG::instance_playback() {
 	Ref<VideoStreamPlaybackFFMPEG> pb = memnew(VideoStreamPlaybackFFMPEG);
+	pb->set_interface(stat_interface);
 	pb->set_audio_track(audio_track);
 	if (pb->open_file(file))
 		return pb;
