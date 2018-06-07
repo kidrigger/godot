@@ -10159,7 +10159,7 @@
       "next": null,
       "api": [
         {
-          "name": "godot_videodecoder_read_packet",
+          "name": "godot_videodecoder_file_read",
           "return_type": "godot_int",
           "arguments": [
             [
@@ -10177,7 +10177,7 @@
           ]
         },
         {
-          "name": "godot_videodecoder_seek_packet",
+          "name": "godot_videodecoder_file_seek",
           "return_type": "int64_t",
           "arguments": [
             [

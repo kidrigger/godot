@@ -34,7 +34,7 @@ static const godot_videodecoder_interface_gdnative *stat_interface = nullptr;
 
 // TODO: Put at end.
 extern "C" {
-godot_int GDAPI godot_videodecoder_read_packet(void *ptr, uint8_t *buf, int buf_size) {
+godot_int GDAPI godot_videodecoder_file_read(void *ptr, uint8_t *buf, int buf_size) {
 	// ptr is a FileAccess
 	FileAccess *file = reinterpret_cast<FileAccess *>(ptr);
 
@@ -50,7 +50,7 @@ godot_int GDAPI godot_videodecoder_read_packet(void *ptr, uint8_t *buf, int buf_
 	return -1;
 }
 
-int64_t GDAPI godot_videodecoder_seek_packet(void *ptr, int64_t pos, int whence) {
+int64_t GDAPI godot_videodecoder_file_seek(void *ptr, int64_t pos, int whence) {
 	// file
 	FileAccess *file = reinterpret_cast<FileAccess *>(ptr);
 
@@ -126,11 +126,21 @@ VideoStreamPlaybackFFMPEG::VideoStreamPlaybackFFMPEG() :
 }
 
 VideoStreamPlaybackFFMPEG::~VideoStreamPlaybackFFMPEG() {
-	// cleanup();
+	cleanup();
+}
+
+void VideoStreamPlaybackFFMPEG::cleanup() {
+	interface->destructor(data_struct);
+	interface = nullptr;
+	data_struct = nullptr;
 }
 
 void VideoStreamPlaybackFFMPEG::set_interface(const godot_videodecoder_interface_gdnative *p_interface) {
+	if (interface != nullptr) {
+		cleanup();
+	}
 	interface = p_interface;
+	data_struct = interface->constructor((godot_object *)this);
 }
 
 // controls
