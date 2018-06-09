@@ -49,6 +49,7 @@ void ResourceImporterFFMPEG::get_recognized_extensions(List<String> *p_extension
 }
 
 String ResourceImporterFFMPEG::get_save_extension() const {
+
 	return "ffmpegstr";
 }
 
