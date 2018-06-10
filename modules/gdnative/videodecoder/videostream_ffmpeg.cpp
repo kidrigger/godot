@@ -102,28 +102,43 @@ void GDAPI godot_videodecoder_register_decoder(const godot_videodecoder_interfac
 	print_line(p_interface->get_plugin_name());
 	stat_interface = p_interface;
 }
+
+godot_object GDAPI *godot_videodecoder_create_image(godot_pool_byte_array *byte_array, godot_int x, godot_int y) {
+	PoolByteArray *pba = (PoolByteArray *)byte_array;
+	Ref<Image> img = memnew(Image(x, y, 0, Image::FORMAT_RGBA8, *pba));
+
+	return (godot_object *)(&img);
+}
 }
 
 bool VideoStreamPlaybackFFMPEG::open_file(const String &p_file) {
 	ERR_FAIL_COND_V(interface == nullptr, false);
 	file = FileAccess::open(p_file, FileAccess::READ);
-	return interface->open_file(data_struct, file);
+	bool file_opened = interface->open_file(data_struct, file);
+
+	godot_vector2 vec = interface->get_size(data_struct);
+	Vector2 *size = (Vector2 *)&vec;
+	texture->create((int)size->width, (int)size->height, Image::FORMAT_RGBA8, Texture::FLAG_FILTER | Texture::FLAG_VIDEO_SURFACE);
+
+	return file_opened;
 }
 
 void VideoStreamPlaybackFFMPEG::update(float p_delta) {
 	if (!playing || paused) {
 		return;
 	}
+	if (!file) {
+		return;
+	}
 	ERR_FAIL_COND(interface == nullptr);
-	interface->update(data_struct, p_delta);
+	print_line("update()");
+	texture->set_data(*(Ref<Image> *)interface->update(data_struct, p_delta));
 }
 
 // ctor and dtor
 
 VideoStreamPlaybackFFMPEG::VideoStreamPlaybackFFMPEG() :
-		texture(Ref<ImageTexture>(memnew(ImageTexture))) {
-	;
-}
+		texture(Ref<ImageTexture>(memnew(ImageTexture))) {}
 
 VideoStreamPlaybackFFMPEG::~VideoStreamPlaybackFFMPEG() {
 	cleanup();
