@@ -10226,6 +10226,24 @@
               "p_interface"
             ]
           ]
+        },
+        {
+          "name": "godot_videodecoder_create_image",
+          "return_type": "godot_object *",
+          "arguments": [
+            [
+              "godot_pool_byte_array *",
+              "byte_array"
+            ],
+            [
+              "int",
+              "x"
+            ],
+            [
+              "int",
+              "y"
+            ]
+          ]
         }
       ]
     }
