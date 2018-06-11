@@ -102,13 +102,6 @@ void GDAPI godot_videodecoder_register_decoder(const godot_videodecoder_interfac
 	print_line(p_interface->get_plugin_name());
 	stat_interface = p_interface;
 }
-
-godot_object GDAPI *godot_videodecoder_create_image(godot_pool_byte_array *byte_array, godot_int x, godot_int y) {
-	PoolByteArray *pba = (PoolByteArray *)byte_array;
-	Ref<Image> img = memnew(Image(x, y, 0, Image::FORMAT_RGBA8, *pba));
-
-	return (godot_object *)(&img);
-}
 }
 
 bool VideoStreamPlaybackFFMPEG::open_file(const String &p_file) {
@@ -131,8 +124,13 @@ void VideoStreamPlaybackFFMPEG::update(float p_delta) {
 		return;
 	}
 	ERR_FAIL_COND(interface == nullptr);
-	print_line("update()");
-	texture->set_data(*(Ref<Image> *)interface->update(data_struct, p_delta));
+	godot_vector2 vec = interface->get_size(data_struct);
+	Vector2 *size = (Vector2 *)&vec;
+	// FIX HACK
+	PoolByteArray *pba = (PoolByteArray *)interface->update(data_struct, p_delta);
+	Ref<Image> img = memnew(Image(size->width, size->height, 0, Image::FORMAT_RGBA8, *pba));
+
+	texture->set_data(img);
 }
 
 // ctor and dtor
