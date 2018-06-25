@@ -37,6 +37,8 @@
 extern "C" {
 #endif
 
+typedef int (*GDNativeAudioMixCallback)(void *, const float *, int);
+
 typedef struct
 {
 	void *(*constructor)(godot_object *);
@@ -48,11 +50,13 @@ typedef struct
 	void (*seek)(void *, godot_real);
 	void (*set_audio_track)(void *, godot_int);
 	godot_pool_byte_array *(*update)(void *, godot_real);
-	void (*set_mix_callback)(void *, void *, void *); // TODO: 2nd arg Needs to be AudioMixCallback
+	void (*set_mix_callback)(void *, GDNativeAudioMixCallback, void *);
 	godot_int (*get_channels)(const void *);
 	godot_int (*get_mix_rate)(const void *);
 	godot_vector2 (*get_size)(const void *);
 } godot_videodecoder_interface_gdnative;
+
+typedef int (*GDNativeAudioMixCallback)(void *, const float *, int);
 
 // FileAccess wrappers for custom FFmpeg IO
 godot_int GDAPI godot_videodecoder_file_read(void *file_ptr, uint8_t *buf, int buf_size);

@@ -32,7 +32,7 @@
 
 static const godot_videodecoder_interface_gdnative *stat_interface = nullptr;
 
-// TODO: Put at end.
+// NOTE: Callbacks for the GDNative libraries.
 extern "C" {
 godot_int GDAPI godot_videodecoder_file_read(void *ptr, uint8_t *buf, int buf_size) {
 	// ptr is a FileAccess
@@ -104,6 +104,8 @@ void GDAPI godot_videodecoder_register_decoder(const godot_videodecoder_interfac
 }
 }
 
+// VideoStreamPlaybackFFMPEG starts here.
+
 bool VideoStreamPlaybackFFMPEG::open_file(const String &p_file) {
 	ERR_FAIL_COND_V(interface == nullptr, false);
 	file = FileAccess::open(p_file, FileAccess::READ);
@@ -126,8 +128,14 @@ void VideoStreamPlaybackFFMPEG::update(float p_delta) {
 	ERR_FAIL_COND(interface == nullptr);
 	godot_vector2 vec = interface->get_size(data_struct);
 	Vector2 *size = (Vector2 *)&vec;
-	// FIX HACK
+
 	PoolByteArray *pba = (PoolByteArray *)interface->update(data_struct, p_delta);
+
+	if (pba == NULL) {
+		playing = false;
+		return;
+	}
+
 	Ref<Image> img = memnew(Image(size->width, size->height, 0, Image::FORMAT_RGBA8, *pba));
 
 	texture->set_data(img);
@@ -220,6 +228,7 @@ void VideoStreamPlaybackFFMPEG::set_audio_track(int p_idx) {
 
 void VideoStreamPlaybackFFMPEG::set_mix_callback(AudioMixCallback p_callback, void *p_userdata) {
 	// TODO
+	interface->set_mix_callback(data_struct, p_callback, p_userdata);
 }
 
 int VideoStreamPlaybackFFMPEG::get_channels() const {
@@ -235,8 +244,6 @@ int VideoStreamPlaybackFFMPEG::get_mix_rate() const {
 }
 
 /* --- NOTE VideoStreamFFMPEG starts here. ----- */
-// FIX: remove region
-#pragma region // VideoStreamFFMPEG
 
 Ref<VideoStreamPlayback> VideoStreamFFMPEG::instance_playback() {
 	Ref<VideoStreamPlaybackFFMPEG> pb = memnew(VideoStreamPlaybackFFMPEG);
@@ -269,6 +276,3 @@ void VideoStreamFFMPEG::set_audio_track(int p_track) {
 
 	audio_track = p_track;
 }
-
-// FIX remove
-#pragma endregion
