@@ -49,11 +49,12 @@ typedef struct
 	godot_real (*get_playback_position)(const void *);
 	void (*seek)(void *, godot_real);
 	void (*set_audio_track)(void *, godot_int);
-	godot_pool_byte_array *(*update)(void *, godot_real);
-	void (*set_mix_callback)(void *, GDNativeAudioMixCallback, void *);
+	void (*update)(void *, godot_real);
+	godot_pool_byte_array *(*get_videoframe)(void *);
+	godot_int (*get_audioframe)(void *, float *, int);
 	godot_int (*get_channels)(const void *);
 	godot_int (*get_mix_rate)(const void *);
-	godot_vector2 (*get_size)(const void *);
+	godot_vector2 (*get_texture_size)(const void *);
 } godot_videodecoder_interface_gdnative;
 
 typedef int (*GDNativeAudioMixCallback)(void *, const float *, int);

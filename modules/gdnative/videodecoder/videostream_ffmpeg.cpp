@@ -29,6 +29,8 @@
 /*************************************************************************/
 
 #include "videostream_ffmpeg.h"
+#include <project_settings.h>
+#include <servers/audio_server.h>
 
 static const godot_videodecoder_interface_gdnative *stat_interface = nullptr;
 
@@ -67,15 +69,6 @@ int64_t GDAPI godot_videodecoder_file_seek(void *ptr, int64_t pos, int whence) {
 				pos = static_cast<int64_t>(file->get_position());
 				return pos;
 			} break;
-			case SEEK_END: {
-				// Just in case something goes wrong
-				if (-pos > len) {
-					return -1;
-				}
-				file->seek_end(pos);
-				pos = static_cast<int64_t>(file->get_position());
-				return pos;
-			} break;
 			case SEEK_CUR: {
 				// Just in case it doesn't exist
 				if (pos < 0 && -pos > file->get_position()) {
@@ -83,6 +76,15 @@ int64_t GDAPI godot_videodecoder_file_seek(void *ptr, int64_t pos, int whence) {
 				}
 				pos = pos + static_cast<int>(file->get_position());
 				file->seek(pos);
+				pos = static_cast<int64_t>(file->get_position());
+				return pos;
+			} break;
+			case SEEK_END: {
+				// Just in case something goes wrong
+				if (-pos > len) {
+					return -1;
+				}
+				file->seek_end(pos);
 				pos = static_cast<int64_t>(file->get_position());
 				return pos;
 			} break;
@@ -111,9 +113,18 @@ bool VideoStreamPlaybackFFMPEG::open_file(const String &p_file) {
 	file = FileAccess::open(p_file, FileAccess::READ);
 	bool file_opened = interface->open_file(data_struct, file);
 
-	godot_vector2 vec = interface->get_size(data_struct);
-	Vector2 *size = (Vector2 *)&vec;
-	texture->create((int)size->width, (int)size->height, Image::FORMAT_RGBA8, Texture::FLAG_FILTER | Texture::FLAG_VIDEO_SURFACE);
+	num_channels = interface->get_channels(data_struct);
+	mix_rate = interface->get_mix_rate(data_struct);
+
+	godot_vector2 vec = interface->get_texture_size(data_struct);
+	texture_size = *(Vector2 *)&vec;
+
+	pcm = (float *)memalloc(num_channels * AUX_BUFFER_SIZE * sizeof(float));
+	memset(pcm, 0, num_channels * AUX_BUFFER_SIZE * sizeof(float));
+	pcm_write_idx = -1;
+	samples_decoded = 0;
+
+	texture->create((int)texture_size.width, (int)texture_size.height, Image::FORMAT_RGBA8, Texture::FLAG_FILTER | Texture::FLAG_VIDEO_SURFACE);
 
 	return file_opened;
 }
@@ -125,18 +136,47 @@ void VideoStreamPlaybackFFMPEG::update(float p_delta) {
 	if (!file) {
 		return;
 	}
+	time += p_delta;
 	ERR_FAIL_COND(interface == nullptr);
-	godot_vector2 vec = interface->get_size(data_struct);
-	Vector2 *size = (Vector2 *)&vec;
+	interface->update(data_struct, p_delta);
 
-	PoolByteArray *pba = (PoolByteArray *)interface->update(data_struct, p_delta);
+	if (pcm_write_idx >= 0) {
+		// Previous remains
+		int mixed = mix_callback(mix_udata, pcm, samples_decoded);
+		if (mixed == samples_decoded) {
+			pcm_write_idx = -1;
+		} else {
+			samples_decoded -= mixed;
+			pcm_write_idx += mixed;
+		}
+	}
+	if (pcm_write_idx < 0) {
+		samples_decoded = interface->get_audioframe(data_struct, pcm, AUX_BUFFER_SIZE);
+		pcm_write_idx = mix_callback(mix_udata, pcm, samples_decoded);
+		if (pcm_write_idx == samples_decoded) {
+			pcm_write_idx = -1;
+		} else {
+			samples_decoded -= pcm_write_idx;
+		}
+	}
+
+	printf("R: %i\tM %i\n", samples_decoded, pcm_write_idx);
+
+	while (interface->get_playback_position(data_struct) < time) {
+
+		update_texture();
+	}
+}
+
+void VideoStreamPlaybackFFMPEG::update_texture() {
+	PoolByteArray *pba = (PoolByteArray *)interface->get_videoframe(data_struct);
 
 	if (pba == NULL) {
 		playing = false;
 		return;
 	}
 
-	Ref<Image> img = memnew(Image(size->width, size->height, 0, Image::FORMAT_RGBA8, *pba));
+	Ref<Image> img = memnew(Image(texture_size.width, texture_size.height, 0, Image::FORMAT_RGBA8, *pba));
 
 	texture->set_data(img);
 }
@@ -144,7 +184,12 @@ void VideoStreamPlaybackFFMPEG::update(float p_delta) {
 // ctor and dtor
 
 VideoStreamPlaybackFFMPEG::VideoStreamPlaybackFFMPEG() :
-		texture(Ref<ImageTexture>(memnew(ImageTexture))) {}
+		texture(Ref<ImageTexture>(memnew(ImageTexture))),
+		time(0),
+		mix_udata(nullptr),
+		mix_callback(nullptr),
+		num_channels(-1),
+		mix_rate(0) {}
 
 VideoStreamPlaybackFFMPEG::~VideoStreamPlaybackFFMPEG() {
 	cleanup();
@@ -152,6 +197,10 @@ VideoStreamPlaybackFFMPEG::~VideoStreamPlaybackFFMPEG() {
 
 void VideoStreamPlaybackFFMPEG::cleanup() {
 	interface->destructor(data_struct);
+	memfree(pcm);
+	pcm = nullptr;
+	time = 0;
+	num_channels = -1;
 	interface = nullptr;
 	data_struct = nullptr;
 }
@@ -179,6 +228,9 @@ void VideoStreamPlaybackFFMPEG::play() {
 	stop();
 
 	playing = true;
+
+	delay_compensation = ProjectSettings::get_singleton()->get("audio/video_delay_compensation_ms");
+	delay_compensation /= 1000.0;
 }
 
 void VideoStreamPlaybackFFMPEG::stop() {
@@ -227,20 +279,21 @@ void VideoStreamPlaybackFFMPEG::set_audio_track(int p_idx) {
 }
 
 void VideoStreamPlaybackFFMPEG::set_mix_callback(AudioMixCallback p_callback, void *p_userdata) {
-	// TODO
-	interface->set_mix_callback(data_struct, p_callback, p_userdata);
+
+	mix_udata = p_userdata;
+	mix_callback = p_callback;
 }
 
 int VideoStreamPlaybackFFMPEG::get_channels() const {
 	ERR_FAIL_COND_V(interface == nullptr, 0);
 
-	return interface->get_channels(data_struct);
+	return (num_channels > 0) ? num_channels : 0;
 }
 
 int VideoStreamPlaybackFFMPEG::get_mix_rate() const {
 	ERR_FAIL_COND_V(interface == nullptr, 0);
 
-	return interface->get_mix_rate(data_struct);
+	return mix_rate;
 }
 
 /* --- NOTE VideoStreamFFMPEG starts here. ----- */

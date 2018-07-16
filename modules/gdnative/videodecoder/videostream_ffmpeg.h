@@ -44,7 +44,23 @@ class VideoStreamPlaybackFFMPEG : public VideoStreamPlayback {
 	bool playing;
 	bool paused;
 
+	Vector2 texture_size;
+
+	void *mix_udata;
+	AudioMixCallback mix_callback;
+
+	int num_channels;
+	float time;
+	int mix_rate;
+	double delay_compensation;
+
+	const int AUX_BUFFER_SIZE = 1024; // Buffer 1024 samples.
+	float *pcm;
+	int pcm_write_idx;
+	int samples_decoded;
+
 	void cleanup();
+	void update_texture();
 
 protected:
 	String file_name;
