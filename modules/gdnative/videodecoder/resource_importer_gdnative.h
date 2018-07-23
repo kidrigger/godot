@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  resource_importer_ffmpeg.cpp                                         */
+/*  resource_importer_gdnative.h                                         */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,65 +28,31 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#include "resource_importer_ffmpeg.h"
+#ifndef RESOURCEIMPORTERMP4FFMPEG_H
+#define RESOURCEIMPORTERMP4FFMPEG_H
 
-#include "io/resource_saver.h"
-#include "os/file_access.h"
-#include "scene/resources/texture.h"
+#include "video_stream_gdnative.h"
 
-String ResourceImporterFFMPEG::get_importer_name() const {
+#include "core/io/resource_import.h"
 
-	return "FFMPEG";
-}
+class ResourceImporterGDNative : public ResourceImporter {
+	GDCLASS(ResourceImporterGDNative, ResourceImporter)
+public:
+	virtual String get_importer_name() const;
+	virtual String get_visible_name() const;
+	virtual void get_recognized_extensions(List<String> *p_extensions) const;
+	virtual String get_save_extension() const;
+	virtual String get_resource_type() const;
 
-String ResourceImporterFFMPEG::get_visible_name() const {
+	virtual int get_preset_count() const;
+	virtual String get_preset_name(int p_idx) const;
 
-	return "FFMPEG";
-}
-void ResourceImporterFFMPEG::get_recognized_extensions(List<String> *p_extensions) const {
+	virtual void get_import_options(List<ImportOption> *r_options, int p_preset = 0) const;
+	virtual bool get_option_visibility(const String &p_option, const Map<StringName, Variant> &p_options) const;
 
-	p_extensions->push_back("mp4");
-}
+	virtual Error import(const String &p_source_file, const String &p_save_path, const Map<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files = NULL);
 
-String ResourceImporterFFMPEG::get_save_extension() const {
+	ResourceImporterGDNative();
+};
 
-	return "ffmpegstr";
-}
-
-String ResourceImporterFFMPEG::get_resource_type() const {
-
-	return "VideoStreamFFMPEG";
-}
-
-bool ResourceImporterFFMPEG::get_option_visibility(const String &p_option, const Map<StringName, Variant> &p_options) const {
-
-	return true;
-}
-
-int ResourceImporterFFMPEG::get_preset_count() const {
-
-	return 0;
-}
-
-String ResourceImporterFFMPEG::get_preset_name(int p_idx) const {
-
-	return String();
-}
-
-void ResourceImporterFFMPEG::get_import_options(List<ImportOption> *r_options, int p_preset) const {
-
-	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "loop"), true));
-}
-
-Error ResourceImporterFFMPEG::import(const String &p_source_file, const String &p_save_path, const Map<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files) {
-
-	VideoStreamFFMPEG *stream = memnew(VideoStreamFFMPEG);
-	stream->set_file(p_source_file);
-
-	Ref<VideoStreamFFMPEG> ogv_stream = Ref<VideoStreamFFMPEG>(stream);
-
-	return ResourceSaver::save(p_save_path + ".ffmpegstr", ogv_stream);
-}
-
-ResourceImporterFFMPEG::ResourceImporterFFMPEG() {
-}
+#endif // RESOURCEIMPORTERMP4FFMPEG_H

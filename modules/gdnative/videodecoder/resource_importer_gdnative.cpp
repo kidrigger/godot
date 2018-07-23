@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  resource_importer_ffmpeg.h                                           */
+/*  resource_importer_gdnative.cpp                                       */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,31 +28,70 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef RESOURCEIMPORTERMP4FFMPEG_H
-#define RESOURCEIMPORTERMP4FFMPEG_H
+#include "resource_importer_gdnative.h"
 
-#include "videostream_ffmpeg.h"
+#include "io/resource_saver.h"
+#include "os/file_access.h"
+#include "scene/resources/texture.h"
 
-#include "core/io/resource_import.h"
+String ResourceImporterGDNative::get_importer_name() const {
 
-class ResourceImporterFFMPEG : public ResourceImporter {
-	GDCLASS(ResourceImporterFFMPEG, ResourceImporter)
-public:
-	virtual String get_importer_name() const;
-	virtual String get_visible_name() const;
-	virtual void get_recognized_extensions(List<String> *p_extensions) const;
-	virtual String get_save_extension() const;
-	virtual String get_resource_type() const;
+	return "AVGDNative";
+}
 
-	virtual int get_preset_count() const;
-	virtual String get_preset_name(int p_idx) const;
+String ResourceImporterGDNative::get_visible_name() const {
 
-	virtual void get_import_options(List<ImportOption> *r_options, int p_preset = 0) const;
-	virtual bool get_option_visibility(const String &p_option, const Map<StringName, Variant> &p_options) const;
+	return "AVGDNative";
+}
+void ResourceImporterGDNative::get_recognized_extensions(List<String> *p_extensions) const {
 
-	virtual Error import(const String &p_source_file, const String &p_save_path, const Map<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files = NULL);
+	Map<String, int>::Element *el = VideoDecoderServer::get_instance()->get_extensions().front();
+	while (el) {
+		p_extensions->push_back(el->key());
+		print_line(el->key());
+		el = el->next();
+	}
+}
 
-	ResourceImporterFFMPEG();
-};
+String ResourceImporterGDNative::get_save_extension() const {
 
-#endif // RESOURCEIMPORTERMP4FFMPEG_H
+	return "avgdnstr";
+}
+
+String ResourceImporterGDNative::get_resource_type() const {
+
+	return "VideoStreamGDNative";
+}
+
+bool ResourceImporterGDNative::get_option_visibility(const String &p_option, const Map<StringName, Variant> &p_options) const {
+
+	return true;
+}
+
+int ResourceImporterGDNative::get_preset_count() const {
+
+	return 0;
+}
+
+String ResourceImporterGDNative::get_preset_name(int p_idx) const {
+
+	return String();
+}
+
+void ResourceImporterGDNative::get_import_options(List<ImportOption> *r_options, int p_preset) const {
+
+	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "loop"), true));
+}
+
+Error ResourceImporterGDNative::import(const String &p_source_file, const String &p_save_path, const Map<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files) {
+
+	VideoStreamGDNative *stream = memnew(VideoStreamGDNative);
+	stream->set_file(p_source_file);
+
+	Ref<VideoStreamGDNative> avgdn_stream = Ref<VideoStreamGDNative>(stream);
+
+	return ResourceSaver::save(p_save_path + ".avgdnstr", avgdn_stream);
+}
+
+ResourceImporterGDNative::ResourceImporterGDNative() {
+}
