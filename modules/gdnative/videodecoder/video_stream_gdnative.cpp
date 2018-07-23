@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  videostream_ffmpeg.cpp                                               */
+/*  video_stream_gdnative.cpp                                            */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,11 +28,13 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#include "videostream_ffmpeg.h"
+#include "video_stream_gdnative.h"
 #include <project_settings.h>
 #include <servers/audio_server.h>
 
-static const godot_videodecoder_interface_gdnative *stat_interface = nullptr;
+VideoDecoderServer *VideoDecoderServer::instance = nullptr;
+
+static VideoDecoderServer decoder_server;
 
 // NOTE: Callbacks for the GDNative libraries.
 extern "C" {
@@ -100,15 +102,13 @@ int64_t GDAPI godot_videodecoder_file_seek(void *ptr, int64_t pos, int whence) {
 }
 
 void GDAPI godot_videodecoder_register_decoder(const godot_videodecoder_interface_gdnative *p_interface) {
-	print_line("Interface registered");
-	print_line(p_interface->get_plugin_name());
-	stat_interface = p_interface;
+	decoder_server.register_decoder_interface(p_interface);
 }
 }
 
-// VideoStreamPlaybackFFMPEG starts here.
+// VideoStreamPlaybackGDNative starts here.
 
-bool VideoStreamPlaybackFFMPEG::open_file(const String &p_file) {
+bool VideoStreamPlaybackGDNative::open_file(const String &p_file) {
 	ERR_FAIL_COND_V(interface == nullptr, false);
 	file = FileAccess::open(p_file, FileAccess::READ);
 	bool file_opened = interface->open_file(data_struct, file);
@@ -129,7 +129,7 @@ bool VideoStreamPlaybackFFMPEG::open_file(const String &p_file) {
 	return file_opened;
 }
 
-void VideoStreamPlaybackFFMPEG::update(float p_delta) {
+void VideoStreamPlaybackGDNative::update(float p_delta) {
 	if (!playing || paused) {
 		return;
 	}
@@ -160,7 +160,7 @@ void VideoStreamPlaybackFFMPEG::update(float p_delta) {
 		}
 	}
 
-	printf("R: %i\tM %i\n", samples_decoded, pcm_write_idx);
+	// printf("R: %i\tM %i\n", samples_decoded, pcm_write_idx);
 
 	while (interface->get_playback_position(data_struct) < time) {
 
@@ -168,7 +168,7 @@ void VideoStreamPlaybackFFMPEG::update(float p_delta) {
 	}
 }
 
-void VideoStreamPlaybackFFMPEG::update_texture() {
+void VideoStreamPlaybackGDNative::update_texture() {
 	PoolByteArray *pba = (PoolByteArray *)interface->get_videoframe(data_struct);
 
 	if (pba == NULL) {
@@ -183,7 +183,7 @@ void VideoStreamPlaybackFFMPEG::update_texture() {
 
 // ctor and dtor
 
-VideoStreamPlaybackFFMPEG::VideoStreamPlaybackFFMPEG() :
+VideoStreamPlaybackGDNative::VideoStreamPlaybackGDNative() :
 		texture(Ref<ImageTexture>(memnew(ImageTexture))),
 		time(0),
 		mix_udata(nullptr),
@@ -191,11 +191,11 @@ VideoStreamPlaybackFFMPEG::VideoStreamPlaybackFFMPEG() :
 		num_channels(-1),
 		mix_rate(0) {}
 
-VideoStreamPlaybackFFMPEG::~VideoStreamPlaybackFFMPEG() {
+VideoStreamPlaybackGDNative::~VideoStreamPlaybackGDNative() {
 	cleanup();
 }
 
-void VideoStreamPlaybackFFMPEG::cleanup() {
+void VideoStreamPlaybackGDNative::cleanup() {
 	interface->destructor(data_struct);
 	memfree(pcm);
 	pcm = nullptr;
@@ -205,7 +205,7 @@ void VideoStreamPlaybackFFMPEG::cleanup() {
 	data_struct = nullptr;
 }
 
-void VideoStreamPlaybackFFMPEG::set_interface(const godot_videodecoder_interface_gdnative *p_interface) {
+void VideoStreamPlaybackGDNative::set_interface(const godot_videodecoder_interface_gdnative *p_interface) {
 	if (interface != nullptr) {
 		cleanup();
 	}
@@ -215,15 +215,15 @@ void VideoStreamPlaybackFFMPEG::set_interface(const godot_videodecoder_interface
 
 // controls
 
-bool VideoStreamPlaybackFFMPEG::is_playing() const {
+bool VideoStreamPlaybackGDNative::is_playing() const {
 	return playing;
 }
 
-bool VideoStreamPlaybackFFMPEG::is_paused() const {
+bool VideoStreamPlaybackGDNative::is_paused() const {
 	return paused;
 }
 
-void VideoStreamPlaybackFFMPEG::play() {
+void VideoStreamPlaybackGDNative::play() {
 
 	stop();
 
@@ -233,99 +233,99 @@ void VideoStreamPlaybackFFMPEG::play() {
 	delay_compensation /= 1000.0;
 }
 
-void VideoStreamPlaybackFFMPEG::stop() {
+void VideoStreamPlaybackGDNative::stop() {
 	if (playing) {
 		seek(0);
 	}
 	playing = false;
 }
 
-void VideoStreamPlaybackFFMPEG::seek(float p_time) {
+void VideoStreamPlaybackGDNative::seek(float p_time) {
 	ERR_FAIL_COND(interface == nullptr);
 	interface->seek(data_struct, p_time);
 }
 
-void VideoStreamPlaybackFFMPEG::set_paused(bool p_paused) {
+void VideoStreamPlaybackGDNative::set_paused(bool p_paused) {
 	paused = p_paused;
 }
 
-Ref<Texture> VideoStreamPlaybackFFMPEG::get_texture() {
+Ref<Texture> VideoStreamPlaybackGDNative::get_texture() {
 	return texture;
 }
 
-float VideoStreamPlaybackFFMPEG::get_length() const {
+float VideoStreamPlaybackGDNative::get_length() const {
 	ERR_FAIL_COND_V(interface == nullptr, 0);
 	return interface->get_length(data_struct);
 }
 
-float VideoStreamPlaybackFFMPEG::get_playback_position() const {
+float VideoStreamPlaybackGDNative::get_playback_position() const {
 
 	ERR_FAIL_COND_V(interface == nullptr, 0);
 	return interface->get_playback_position(data_struct);
 }
 
-bool VideoStreamPlaybackFFMPEG::has_loop() const {
+bool VideoStreamPlaybackGDNative::has_loop() const {
 	// TODO: Implement looping?
 	return false;
 }
 
-void VideoStreamPlaybackFFMPEG::set_loop(bool p_enable) {
+void VideoStreamPlaybackGDNative::set_loop(bool p_enable) {
 	// Do nothing
 }
 
-void VideoStreamPlaybackFFMPEG::set_audio_track(int p_idx) {
+void VideoStreamPlaybackGDNative::set_audio_track(int p_idx) {
 	ERR_FAIL_COND(interface == nullptr);
 	interface->set_audio_track(data_struct, p_idx);
 }
 
-void VideoStreamPlaybackFFMPEG::set_mix_callback(AudioMixCallback p_callback, void *p_userdata) {
+void VideoStreamPlaybackGDNative::set_mix_callback(AudioMixCallback p_callback, void *p_userdata) {
 
 	mix_udata = p_userdata;
 	mix_callback = p_callback;
 }
 
-int VideoStreamPlaybackFFMPEG::get_channels() const {
+int VideoStreamPlaybackGDNative::get_channels() const {
 	ERR_FAIL_COND_V(interface == nullptr, 0);
 
 	return (num_channels > 0) ? num_channels : 0;
 }
 
-int VideoStreamPlaybackFFMPEG::get_mix_rate() const {
+int VideoStreamPlaybackGDNative::get_mix_rate() const {
 	ERR_FAIL_COND_V(interface == nullptr, 0);
 
 	return mix_rate;
 }
 
-/* --- NOTE VideoStreamFFMPEG starts here. ----- */
+/* --- NOTE VideoStreamGDNative starts here. ----- */
 
-Ref<VideoStreamPlayback> VideoStreamFFMPEG::instance_playback() {
-	Ref<VideoStreamPlaybackFFMPEG> pb = memnew(VideoStreamPlaybackFFMPEG);
-	pb->set_interface(stat_interface);
+Ref<VideoStreamPlayback> VideoStreamGDNative::instance_playback() {
+	Ref<VideoStreamPlaybackGDNative> pb = memnew(VideoStreamPlaybackGDNative);
+	pb->set_interface(decoder_server.get_decoder("mp4")->interface);
 	pb->set_audio_track(audio_track);
 	if (pb->open_file(file))
 		return pb;
 	return NULL;
 }
 
-void VideoStreamFFMPEG::set_file(const String &p_file) {
+void VideoStreamGDNative::set_file(const String &p_file) {
 
 	file = p_file;
 }
 
-String VideoStreamFFMPEG::get_file() {
+String VideoStreamGDNative::get_file() {
 
 	return file;
 }
 
-void VideoStreamFFMPEG::_bind_methods() {
+void VideoStreamGDNative::_bind_methods() {
 
-	ClassDB::bind_method(D_METHOD("set_file", "file"), &VideoStreamFFMPEG::set_file);
-	ClassDB::bind_method(D_METHOD("get_file"), &VideoStreamFFMPEG::get_file);
+	ClassDB::bind_method(D_METHOD("set_file", "file"), &VideoStreamGDNative::set_file);
+	ClassDB::bind_method(D_METHOD("get_file"), &VideoStreamGDNative::get_file);
 
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "file", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR | PROPERTY_USAGE_INTERNAL), "set_file", "get_file");
 }
 
-void VideoStreamFFMPEG::set_audio_track(int p_track) {
+void VideoStreamGDNative::set_audio_track(int p_track) {
 
 	audio_track = p_track;
 }

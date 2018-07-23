@@ -1,17 +1,17 @@
 /* register_types.h */
 
 #include "class_db.h"
-#include "resource_importer_ffmpeg.h"
-#include "videostream_ffmpeg.h"
+#include "resource_importer_gdnative.h"
+#include "video_stream_gdnative.h"
 
 void register_videodecoder_types() {
 
 #ifdef TOOLS_ENABLED
-	Ref<ResourceImporterFFMPEG> ffmpeg_import;
-	ffmpeg_import.instance();
-	ResourceFormatImporter::get_singleton()->add_importer(ffmpeg_import);
+	Ref<ResourceImporterGDNative> avgdn_import;
+	avgdn_import.instance();
+	ResourceFormatImporter::get_singleton()->add_importer(avgdn_import);
 #endif
-	ClassDB::register_class<VideoStreamFFMPEG>();
+	ClassDB::register_class<VideoStreamGDNative>();
 }
 void unregister_videodecoder_types() {
 }

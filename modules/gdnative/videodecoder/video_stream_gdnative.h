@@ -36,9 +36,84 @@
 #include <scene/resources/texture.h>
 #include <scene/resources/video_stream.h>
 
-class VideoStreamPlaybackFFMPEG : public VideoStreamPlayback {
+struct VideoDecoderGDNative {
+	String plugin_name;
+	Vector<String> supported_extensions;
+	const godot_videodecoder_interface_gdnative *interface;
 
-	GDCLASS(VideoStreamPlaybackFFMPEG, VideoStreamPlayback);
+	VideoDecoderGDNative() :
+			interface(nullptr),
+			plugin_name("none") {}
+
+	VideoDecoderGDNative(const godot_videodecoder_interface_gdnative *p_interface) :
+			interface(p_interface),
+			plugin_name(p_interface->get_plugin_name()) {
+		_get_supported_extensions();
+	}
+
+	void set_interface(const godot_videodecoder_interface_gdnative *p_interface) {
+		interface = p_interface;
+		plugin_name = p_interface->get_plugin_name();
+		_get_supported_extensions();
+	}
+
+private:
+	void _get_supported_extensions() {
+		supported_extensions.clear();
+		int num_ext;
+		char **supported_ext = interface->get_supported_extensions(&num_ext);
+		for (int i = 0; i < num_ext; i++) {
+			supported_extensions.push_back(supported_ext[i]);
+		}
+	}
+};
+
+class VideoDecoderServer {
+private:
+	Vector<VideoDecoderGDNative *> decoders;
+	Map<String, int> extensions;
+
+	static VideoDecoderServer *instance;
+
+public:
+	static VideoDecoderServer *get_instance() {
+		return instance;
+	}
+
+	const Map<String, int> &get_extensions() {
+		return extensions;
+	}
+
+	void register_decoder_interface(const godot_videodecoder_interface_gdnative *p_interface) {
+		VideoDecoderGDNative *decoder = memnew(VideoDecoderGDNative);
+		decoder->set_interface(p_interface);
+		int index = decoders.size();
+		for (int i = 0; i < decoder->supported_extensions.size(); i++) {
+			extensions[decoder->supported_extensions[i]] = index;
+		}
+		decoders.push_back(decoder);
+	}
+
+	VideoDecoderGDNative *get_decoder(const String &extension) {
+		return decoders[extensions[extension]];
+	}
+
+	VideoDecoderServer() {
+		instance = this;
+	}
+
+	~VideoDecoderServer() {
+		for (int i = 0; i < decoders.size(); i++) {
+			memdelete(decoders[i]);
+		}
+		decoders.clear();
+		instance = nullptr;
+	}
+};
+
+class VideoStreamPlaybackGDNative : public VideoStreamPlayback {
+
+	GDCLASS(VideoStreamPlaybackGDNative, VideoStreamPlayback);
 
 	Ref<ImageTexture> texture;
 	bool playing;
@@ -71,8 +146,8 @@ protected:
 	void *data_struct = nullptr;
 
 public:
-	VideoStreamPlaybackFFMPEG();
-	~VideoStreamPlaybackFFMPEG();
+	VideoStreamPlaybackGDNative();
+	~VideoStreamPlaybackGDNative();
 
 	void set_interface(const godot_videodecoder_interface_gdnative *p_interface);
 
@@ -106,10 +181,10 @@ public:
 	virtual int get_mix_rate() const;
 };
 
-class VideoStreamFFMPEG : public VideoStream {
+class VideoStreamGDNative : public VideoStream {
 
-	GDCLASS(VideoStreamFFMPEG, VideoStream);
-	RES_BASE_EXTENSION("ffmpegstr");
+	GDCLASS(VideoStreamGDNative, VideoStream);
+	RES_BASE_EXTENSION("avgdnstr");
 
 	String file;
 	int audio_track;
@@ -125,7 +200,7 @@ public:
 	virtual void set_audio_track(int p_track);
 	virtual Ref<VideoStreamPlayback> instance_playback();
 
-	VideoStreamFFMPEG() {}
+	VideoStreamGDNative() {}
 };
 
 #endif
