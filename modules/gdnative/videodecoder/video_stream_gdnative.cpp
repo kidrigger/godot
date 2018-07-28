@@ -102,6 +102,7 @@ int64_t GDAPI godot_videodecoder_file_seek(void *ptr, int64_t pos, int whence) {
 }
 
 void GDAPI godot_videodecoder_register_decoder(const godot_videodecoder_interface_gdnative *p_interface) {
+	printf("REGD2\n");
 	decoder_server.register_decoder_interface(p_interface);
 }
 }
@@ -206,6 +207,7 @@ void VideoStreamPlaybackGDNative::cleanup() {
 }
 
 void VideoStreamPlaybackGDNative::set_interface(const godot_videodecoder_interface_gdnative *p_interface) {
+	ERR_FAIL_COND(p_interface == nullptr);
 	if (interface != nullptr) {
 		cleanup();
 	}
@@ -300,7 +302,10 @@ int VideoStreamPlaybackGDNative::get_mix_rate() const {
 
 Ref<VideoStreamPlayback> VideoStreamGDNative::instance_playback() {
 	Ref<VideoStreamPlaybackGDNative> pb = memnew(VideoStreamPlaybackGDNative);
-	pb->set_interface(decoder_server.get_decoder("mp4")->interface);
+	VideoDecoderGDNative *decoder = decoder_server.get_decoder("mp4");
+	if (decoder == nullptr)
+		return NULL;
+	pb->set_interface(decoder->interface);
 	pb->set_audio_track(audio_track);
 	if (pb->open_file(file))
 		return pb;

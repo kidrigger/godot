@@ -88,6 +88,7 @@ public:
 		VideoDecoderGDNative *decoder = memnew(VideoDecoderGDNative);
 		decoder->set_interface(p_interface);
 		int index = decoders.size();
+		printf("RDI\n");
 		for (int i = 0; i < decoder->supported_extensions.size(); i++) {
 			extensions[decoder->supported_extensions[i]] = index;
 		}
@@ -95,6 +96,8 @@ public:
 	}
 
 	VideoDecoderGDNative *get_decoder(const String &extension) {
+		if (extensions.size() == 0 || !extensions.has(extension))
+			return nullptr;
 		return decoders[extensions[extension]];
 	}
 
