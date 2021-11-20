@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  godot_videodecoder.h                                                 */
+/*  resource_format_loader_video_stream_extension.cpp                    */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,48 +28,45 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef GODOT_NATIVEVIDEODECODER_H
-#define GODOT_NATIVEVIDEODECODER_H
+#include "resource_format_loader_video_stream.h"
 
-#include <gdnative/gdnative.h>
+#include "core/object/class_db.h"
+#include "servers/video_decoder_server.h"
+#include "video_stream_extension.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+RES ResourceFormatLoaderVideoStreamExtension::load(const String &p_path, const String &p_original_path, Error *r_error, bool p_use_sub_threads, float *r_progress, CacheMode p_cache_mode) {
+	FileAccess *f = FileAccess::open(p_path, FileAccess::READ);
+	if (!f) {
+		if (r_error) {
+			*r_error = ERR_CANT_OPEN;
+		}
+		return RES();
+	}
+	memdelete(f);
 
-#define GODOTAV_API_MAJOR 0
-#define GODOTAV_API_MINOR 1
-
-typedef struct
-{
-	godot_gdnative_api_version version;
-	void *next;
-	void *(*constructor)(godot_object *);
-	void (*destructor)(void *);
-	const char *(*get_plugin_name)();
-	const char **(*get_supported_extensions)(int *count);
-	godot_bool (*open_file)(void *, void *); // data struct, and a FileAccess pointer
-	godot_float (*get_length)(const void *);
-	godot_float (*get_playback_position)(const void *);
-	void (*seek)(void *, godot_float);
-	void (*set_audio_track)(void *, godot_int);
-	void (*update)(void *, godot_float);
-	godot_packed_byte_array *(*get_videoframe)(void *);
-	godot_int (*get_audioframe)(void *, float *, int);
-	godot_int (*get_channels)(const void *);
-	godot_int (*get_mix_rate)(const void *);
-	godot_vector2 (*get_texture_size)(const void *);
-} godot_videodecoder_interface_gdnative;
-
-typedef int (*GDNativeAudioMixCallback)(void *, const float *, int);
-
-// FileAccess wrappers for custom FFmpeg IO
-godot_int GDAPI godot_videodecoder_file_read(void *file_ptr, uint8_t *buf, int buf_size);
-int64_t GDAPI godot_videodecoder_file_seek(void *file_ptr, int64_t pos, int whence);
-void GDAPI godot_videodecoder_register_decoder(const godot_videodecoder_interface_gdnative *p_interface);
-
-#ifdef __cplusplus
+	Ref<VideoStreamExtension> stream = VideoDecoderServer::get_singleton()->get_extension_stream(p_path.get_extension());
+	stream->set_file(p_path);
+	if (r_error) {
+		*r_error = OK;
+	}
+	return stream;
 }
-#endif
 
-#endif /* GODOT_NATIVEVIDEODECODER_H */
+void ResourceFormatLoaderVideoStreamExtension::get_recognized_extensions(List<String> *p_extensions) const {
+	auto recognized_extensions = VideoDecoderServer::get_singleton()->get_recognized_extensions();
+	for (auto &ext : recognized_extensions) {
+		p_extensions->push_back(ext);
+	}
+}
+
+bool ResourceFormatLoaderVideoStreamExtension::handles_type(const String &p_type) const {
+	return ClassDB::is_parent_class(p_type, "VideoStream");
+}
+
+String ResourceFormatLoaderVideoStreamExtension::get_resource_type(const String &p_path) const {
+	String el = p_path.get_extension().to_lower();
+	if (VideoDecoderServer::get_singleton()->has_extension(el)) {
+		return "VideoStreamExtension";
+	}
+	return "";
+}
