@@ -60,6 +60,8 @@ protected:
 	GDVIRTUAL0RC(int, _get_channels);
 	GDVIRTUAL0RC(int, _get_mix_rate);
 
+	GDVIRTUAL0R(bool, _file_opened);
+
 	GDVIRTUAL0(_initialize);
 	GDVIRTUAL0(_cleanup);
 

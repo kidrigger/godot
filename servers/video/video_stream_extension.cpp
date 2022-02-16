@@ -58,6 +58,7 @@ void VideoStreamPlaybackExtension::_bind_methods() {
 	GDVIRTUAL_BIND(_update, "delta");
 	GDVIRTUAL_BIND(_get_channels);
 	GDVIRTUAL_BIND(_get_mix_rate);
+	GDVIRTUAL_BIND(_file_opened);
 	GDVIRTUAL_BIND(_initialize);
 	GDVIRTUAL_BIND(_cleanup);
 }
@@ -143,7 +144,9 @@ Ref<Texture2D> VideoStreamPlaybackExtension::get_texture() const {
 }
 
 void VideoStreamPlaybackExtension::update(float p_delta) {
-	GDVIRTUAL_CALL(_update, p_delta);
+	if (!GDVIRTUAL_CALL(_update, p_delta)) {
+		ERR_FAIL_MSG("VideoStreamPlaybackExtension::update unimplemented");
+	}
 }
 
 void VideoStreamPlaybackExtension::set_mix_callback(AudioMixCallback p_callback, void *p_userdata) {
@@ -167,9 +170,18 @@ int VideoStreamPlaybackExtension::get_mix_rate() const {
 }
 
 bool VideoStreamPlaybackExtension::open_file(const String &p_file) {
+	if (file) {
+		file->close();
+	}
+	
 	file = FileAccess::open(p_file, FileAccess::READ);
 
-	return file != nullptr;
+	bool retval;
+	if (file && GDVIRTUAL_CALL(_file_opened, retval)) {
+		return retval;
+	}
+	
+	return false;
 }
 
 uint64_t VideoStreamPlaybackExtension::file_read(PackedByteArray data) {

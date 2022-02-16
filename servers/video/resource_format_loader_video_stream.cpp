@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  resource_format_loader_video_stream_extension.cpp                    */
+/*  resource_format_loader_video_stream.cpp                              */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
