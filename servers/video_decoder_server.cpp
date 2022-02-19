@@ -77,7 +77,7 @@ void VideoDecoderServer::add_interface(const Ref<VideoStreamExtension> &extensio
 
 void VideoDecoderServer::remove_interface(const Ref<VideoStreamExtension> &extension_stream) {
 	int index = decoders.find(extension_stream);
-	decoders.remove(index);
+	decoders.remove_at(index);
 
 	PackedStringArray supported_ext = extension_stream->get_supported_extensions();
 	for (auto &ext : supported_ext) {
