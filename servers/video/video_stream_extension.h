@@ -40,8 +40,10 @@ class VideoStreamPlaybackExtension : public VideoStreamPlayback {
 
 protected:
 	String file_name;
-
 	FileAccess *file = nullptr;
+
+	AudioMixCallback mix_callback = nullptr;
+	void* mix_userdata = nullptr;
 
 	static void _bind_methods();
 	GDVIRTUAL0(_stop);
@@ -65,10 +67,11 @@ protected:
 	GDVIRTUAL0(_initialize);
 	GDVIRTUAL0(_cleanup);
 
-	uint64_t file_read(PackedByteArray data);
+	PackedByteArray file_read(uint64_t length);
 	void file_seek(int pos);
 	uint64_t file_pos();
 	uint64_t file_len();
+	int mix_audio(int num_frames, PackedFloat32Array buffer = {}, int offset = 0);
 
 public:
 	VideoStreamPlaybackExtension();
@@ -93,8 +96,6 @@ public:
 	virtual void seek(float p_time) override;
 
 	virtual void set_audio_track(int p_idx) override;
-
-	//virtual int mix(int16_t* p_buffer,int p_frames)=0;
 
 	virtual Ref<Texture2D> get_texture() const override;
 	virtual void update(float p_delta) override;

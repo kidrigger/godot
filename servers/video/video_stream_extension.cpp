@@ -39,10 +39,11 @@ const int AUX_BUFFER_SIZE = 1024; // Buffer 1024 samples.
 
 void VideoStreamPlaybackExtension::_bind_methods() {
 	//ClassDB::bind_method(D_METHOD("open_file"), &VideoStreamPlaybackExtension::open_file);
-	ClassDB::bind_method(D_METHOD("file_read", "data"), &VideoStreamPlaybackExtension::file_read);
+	ClassDB::bind_method(D_METHOD("file_read", "length"), &VideoStreamPlaybackExtension::file_read);
 	ClassDB::bind_method(D_METHOD("file_seek", "pos"), &VideoStreamPlaybackExtension::file_seek);
 	ClassDB::bind_method(D_METHOD("file_pos"), &VideoStreamPlaybackExtension::file_pos);
 	ClassDB::bind_method(D_METHOD("file_len"), &VideoStreamPlaybackExtension::file_len);
+	ClassDB::bind_method(D_METHOD("mix_audio", "num_frames", "buffer", "offset"), &VideoStreamPlaybackExtension::mix_audio, DEFVAL(PackedFloat32Array()), DEFVAL(0));
 	GDVIRTUAL_BIND(_stop);
 	GDVIRTUAL_BIND(_play);
 	GDVIRTUAL_BIND(_is_playing);
@@ -150,7 +151,8 @@ void VideoStreamPlaybackExtension::update(float p_delta) {
 }
 
 void VideoStreamPlaybackExtension::set_mix_callback(AudioMixCallback p_callback, void *p_userdata) {
-	WARN_DEPRECATED;
+	mix_callback = p_callback;
+	mix_userdata = p_userdata;
 }
 
 int VideoStreamPlaybackExtension::get_channels() const {
@@ -184,8 +186,11 @@ bool VideoStreamPlaybackExtension::open_file(const String &p_file) {
 	return false;
 }
 
-uint64_t VideoStreamPlaybackExtension::file_read(PackedByteArray data) {
-	return file->get_buffer(data.ptrw(), data.size());
+PackedByteArray VideoStreamPlaybackExtension::file_read(uint64_t length) {
+	static PackedByteArray read_buf;
+	read_buf.resize(length);
+	read_buf.resize(file->get_buffer(read_buf.ptrw(), read_buf.size()));
+	return read_buf;
 }
 
 void VideoStreamPlaybackExtension::file_seek(int pos) {
@@ -198,6 +203,16 @@ uint64_t VideoStreamPlaybackExtension::file_pos() {
 
 uint64_t VideoStreamPlaybackExtension::file_len() {
 	return file->get_length();
+}
+
+int VideoStreamPlaybackExtension::mix_audio(int num_frames, PackedFloat32Array buffer, int offset) {
+	if (num_frames <= 0) {
+		return 0;
+	}
+	if (!mix_callback) {
+		return -1;
+	}
+	return mix_callback(mix_userdata, buffer.ptr() + offset, num_frames);
 }
 
 /* --- NOTE VideoStreamExtension starts here. ----- */
