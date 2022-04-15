@@ -172,17 +172,17 @@ int VideoStreamPlaybackExtension::get_mix_rate() const {
 }
 
 bool VideoStreamPlaybackExtension::open_file(const String &p_file) {
-	if (file) {
-		file->close();
+	if (file.is_valid()) {
+		file.unref();
 	}
-	
+
 	file = FileAccess::open(p_file, FileAccess::READ);
 
 	bool retval;
-	if (file && GDVIRTUAL_CALL(_file_opened, retval)) {
+	if (file.is_valid() && GDVIRTUAL_CALL(_file_opened, retval)) {
 		return retval;
 	}
-	
+
 	return false;
 }
 

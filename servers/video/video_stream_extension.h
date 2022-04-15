@@ -40,10 +40,10 @@ class VideoStreamPlaybackExtension : public VideoStreamPlayback {
 
 protected:
 	String file_name;
-	FileAccess *file = nullptr;
+	Ref<FileAccess> file = nullptr;
 
 	AudioMixCallback mix_callback = nullptr;
-	void* mix_userdata = nullptr;
+	void *mix_userdata = nullptr;
 
 	static void _bind_methods();
 	GDVIRTUAL0(_stop);

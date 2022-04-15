@@ -35,14 +35,12 @@
 #include "video_stream_extension.h"
 
 RES ResourceFormatLoaderVideoStreamExtension::load(const String &p_path, const String &p_original_path, Error *r_error, bool p_use_sub_threads, float *r_progress, CacheMode p_cache_mode) {
-	FileAccess *f = FileAccess::open(p_path, FileAccess::READ);
-	if (!f) {
+	if (!FileAccess::exists(p_path)) {
 		if (r_error) {
 			*r_error = ERR_CANT_OPEN;
 		}
 		return RES();
 	}
-	memdelete(f);
 
 	Ref<VideoStreamExtension> stream = VideoDecoderServer::get_singleton()->get_extension_stream(p_path.get_extension());
 	stream->set_file(p_path);
