@@ -78,6 +78,8 @@
 #include "text/text_server_dummy.h"
 #include "text/text_server_extension.h"
 #include "text_server.h"
+#include "video/resource_format_loader_video_stream.h"
+#include "video_decoder_server.h"
 #include "xr/xr_interface.h"
 #include "xr/xr_interface_extension.h"
 #include "xr/xr_positional_tracker.h"
@@ -229,6 +231,14 @@ void register_server_types() {
 		GDREGISTER_CLASS(AudioEffectCapture);
 	}
 
+	{
+		// Video types
+		GDREGISTER_CLASS(ResourceFormatLoaderVideoStreamExtension);
+		GDREGISTER_CLASS(VideoDecoderServer);
+		GDREGISTER_VIRTUAL_CLASS(VideoStreamPlayback);
+		GDREGISTER_VIRTUAL_CLASS(VideoStream);
+	}
+
 	GDREGISTER_ABSTRACT_CLASS(RenderingDevice);
 	GDREGISTER_CLASS(RDTextureFormat);
 	GDREGISTER_CLASS(RDTextureView);
@@ -301,6 +311,7 @@ void register_server_singletons() {
 	Engine::get_singleton()->add_singleton(Engine::Singleton("DisplayServer", DisplayServer::get_singleton(), "DisplayServer"));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("RenderingServer", RenderingServer::get_singleton(), "RenderingServer"));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("AudioServer", AudioServer::get_singleton(), "AudioServer"));
+	Engine::get_singleton()->add_singleton(Engine::Singleton("VideoDecoderServer", VideoDecoderServer::get_singleton(), "VideoDecoderServer"));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("PhysicsServer2D", PhysicsServer2D::get_singleton(), "PhysicsServer2D"));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("PhysicsServer3D", PhysicsServer3D::get_singleton(), "PhysicsServer3D"));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("NavigationServer2D", NavigationServer2D::get_singleton_mut(), "NavigationServer2D"));

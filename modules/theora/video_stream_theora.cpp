@@ -601,11 +601,6 @@ void VideoStreamPlaybackTheora::seek(float p_time) {
 	WARN_PRINT_ONCE("Seeking in Theora videos is not implemented yet (it's only supported for GDExtension-provided video streams).");
 }
 
-void VideoStreamPlaybackTheora::set_mix_callback(AudioMixCallback p_callback, void *p_userdata) {
-	mix_callback = p_callback;
-	mix_udata = p_userdata;
-}
-
 int VideoStreamPlaybackTheora::get_channels() const {
 	return vi.channels;
 }
@@ -658,50 +653,8 @@ VideoStreamPlaybackTheora::~VideoStreamPlaybackTheora() {
 	memdelete(thread_sem);
 #endif
 	clear();
+
+	texture.unref();
 };
 
-void VideoStreamTheora::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("set_file", "file"), &VideoStreamTheora::set_file);
-	ClassDB::bind_method(D_METHOD("get_file"), &VideoStreamTheora::get_file);
-
-	ADD_PROPERTY(PropertyInfo(Variant::STRING, "file", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR | PROPERTY_USAGE_INTERNAL), "set_file", "get_file");
-}
-
-////////////
-
-Ref<Resource> ResourceFormatLoaderTheora::load(const String &p_path, const String &p_original_path, Error *r_error, bool p_use_sub_threads, float *r_progress, CacheMode p_cache_mode) {
-	Ref<FileAccess> f = FileAccess::open(p_path, FileAccess::READ);
-	if (f.is_null()) {
-		if (r_error) {
-			*r_error = ERR_CANT_OPEN;
-		}
-		return Ref<Resource>();
-	}
-
-	VideoStreamTheora *stream = memnew(VideoStreamTheora);
-	stream->set_file(p_path);
-
-	Ref<VideoStreamTheora> ogv_stream = Ref<VideoStreamTheora>(stream);
-
-	if (r_error) {
-		*r_error = OK;
-	}
-
-	return ogv_stream;
-}
-
-void ResourceFormatLoaderTheora::get_recognized_extensions(List<String> *p_extensions) const {
-	p_extensions->push_back("ogv");
-}
-
-bool ResourceFormatLoaderTheora::handles_type(const String &p_type) const {
-	return ClassDB::is_parent_class(p_type, "VideoStream");
-}
-
-String ResourceFormatLoaderTheora::get_resource_type(const String &p_path) const {
-	String el = p_path.get_extension().to_lower();
-	if (el == "ogv") {
-		return "VideoStreamTheora";
-	}
-	return "";
-}
+void VideoStreamTheora::_bind_methods() {}

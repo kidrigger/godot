@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  register_types.cpp                                                   */
+/*  resource_format_loader_video_stream.h                                */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,31 +28,17 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#include "register_types.h"
+#ifndef RESOURCE_FORMAT_LOADER_VIDEO_STREAM_EXTENSION
+#define RESOURCE_FORMAT_LOADER_VIDEO_STREAM_EXTENSION
 
-#include "video_stream_theora.h"
-#include "servers/video_decoder_server.h"
+#include "core/io/resource_loader.h"
 
-static Ref<VideoStreamTheora> theora_decoder_ref;
+class ResourceFormatLoaderVideoStreamExtension : public ResourceFormatLoader {
+public:
+	Ref<Resource> load(const String &p_path, const String &p_original_path = "", Error *r_error = nullptr, bool p_use_sub_threads = false, float *r_progress = nullptr, CacheMode p_cache_mode = CACHE_MODE_REUSE) override;
+	void get_recognized_extensions(List<String> *p_extensions) const override;
+	bool handles_type(const String &p_type) const override;
+	String get_resource_type(const String &p_path) const override;
+};
 
-void initialize_theora_module(ModuleInitializationLevel p_level) {
-	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
-		return;
-	}
-
-	GDREGISTER_CLASS(VideoStreamTheora);
-	theora_decoder_ref.instantiate();
-	VideoDecoderServer::add_interface(theora_decoder_ref);
-}
-
-void uninitialize_theora_module(ModuleInitializationLevel p_level) {
-	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
-		return;
-	}
-
-	if (theora_decoder_ref.is_valid()) {
-
-		VideoDecoderServer::remove_interface(theora_decoder_ref);
-		theora_decoder_ref.unref();
-	}
-}
+#endif // RESOURCE_FORMAT_LOADER_VIDEO_STREAM_EXTENSION

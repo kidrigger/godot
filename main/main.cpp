@@ -77,6 +77,7 @@
 #include "servers/rendering/rendering_server_default.h"
 #include "servers/text/text_server_dummy.h"
 #include "servers/text_server.h"
+#include "servers/video_decoder_server.h"
 #include "servers/xr_server.h"
 
 #ifdef TESTS_ENABLED
@@ -123,6 +124,7 @@ static MessageQueue *message_queue = nullptr;
 static AudioServer *audio_server = nullptr;
 static DisplayServer *display_server = nullptr;
 static RenderingServer *rendering_server = nullptr;
+static VideoDecoderServer *video_decoder_server = nullptr;
 static CameraServer *camera_server = nullptr;
 static XRServer *xr_server = nullptr;
 static TextServerManager *tsman = nullptr;
@@ -2325,6 +2327,8 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 		}
 	}
 
+	// init the Video decoder server
+	video_decoder_server = memnew(VideoDecoderServer);
 	camera_server = CameraServer::create();
 
 	MAIN_PRINT("Main: Load Physics");
@@ -3313,6 +3317,10 @@ void Main::cleanup(bool p_force) {
 
 	if (xr_server) {
 		memdelete(xr_server);
+	}
+
+	if (video_decoder_server) {
+		memdelete(video_decoder_server);
 	}
 
 	if (audio_server) {

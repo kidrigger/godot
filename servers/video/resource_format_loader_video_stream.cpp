@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  video_stream.h                                                       */
+/*  resource_format_loader_video_stream.cpp                              */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,51 +28,41 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef VIDEO_STREAM_H
-#define VIDEO_STREAM_H
+#include "resource_format_loader_video_stream.h"
 
-#include "scene/resources/texture.h"
+#include "core/object/class_db.h"
+#include "servers/video_decoder_server.h"
+#include "video_stream_extension.h"
 
-class VideoStreamPlayback : public Resource {
-	GDCLASS(VideoStreamPlayback, Resource);
+Ref<Resource> ResourceFormatLoaderVideoStreamExtension::load(const String &p_path, const String &p_original_path, Error *r_error, bool p_use_sub_threads, float *r_progress, CacheMode p_cache_mode) {
+	if (!FileAccess::exists(p_path)) {
+		if (r_error) {
+			*r_error = ERR_CANT_OPEN;
+		}
+		return nullptr;
+	}
 
-public:
-	typedef int (*AudioMixCallback)(void *p_udata, const float *p_data, int p_frames);
+	Ref<VideoStream> stream = VideoDecoderServer::instantiate_stream_for_extension(p_path.get_extension());
 
-	virtual void stop() = 0;
-	virtual void play() = 0;
+	stream->set_file(p_path);
+	if (r_error) {
+		*r_error = OK;
+	}
+	return stream;
+}
 
-	virtual bool is_playing() const = 0;
+void ResourceFormatLoaderVideoStreamExtension::get_recognized_extensions(List<String> *p_extensions) const {
+	auto recognized_extensions = VideoDecoderServer::get_recognized_extensions();
+	for (auto &ext : recognized_extensions) {
+		p_extensions->push_back(ext);
+	}
+}
 
-	virtual void set_paused(bool p_paused) = 0;
-	virtual bool is_paused() const = 0;
+bool ResourceFormatLoaderVideoStreamExtension::handles_type(const String &p_type) const {
+	return ClassDB::is_parent_class(p_type, "VideoStream");
+}
 
-	virtual void set_loop(bool p_enable) = 0;
-	virtual bool has_loop() const = 0;
-
-	virtual float get_length() const = 0;
-
-	virtual float get_playback_position() const = 0;
-	virtual void seek(float p_time) = 0;
-
-	virtual void set_audio_track(int p_idx) = 0;
-
-	virtual Ref<Texture2D> get_texture() const = 0;
-
-	virtual void update(float p_delta) = 0;
-
-	virtual void set_mix_callback(AudioMixCallback p_callback, void *p_userdata) = 0;
-	virtual int get_channels() const = 0;
-	virtual int get_mix_rate() const = 0;
-};
-
-class VideoStream : public Resource {
-	GDCLASS(VideoStream, Resource);
-	OBJ_SAVE_TYPE(VideoStream); // Saves derived classes with common type so they can be interchanged.
-
-public:
-	virtual void set_audio_track(int p_track) = 0;
-	virtual Ref<VideoStreamPlayback> instantiate_playback() = 0;
-};
-
-#endif // VIDEO_STREAM_H
+String ResourceFormatLoaderVideoStreamExtension::get_resource_type(const String &p_path) const {
+	String el = p_path.get_extension().to_lower();
+	return VideoDecoderServer::get_extension_name(el);
+}

@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  register_types.cpp                                                   */
+/*  video_decoder_server.h                                               */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,31 +28,46 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#include "register_types.h"
+#ifndef VIDEO_DECODER_SERVER_H
+#define VIDEO_DECODER_SERVER_H
 
-#include "video_stream_theora.h"
-#include "servers/video_decoder_server.h"
+#include "servers/video/video_stream_extension.h"
 
-static Ref<VideoStreamTheora> theora_decoder_ref;
+class VideoDecoderServer : public Object {
+	GDCLASS(VideoDecoderServer, Object);
+	_THREAD_SAFE_CLASS_
+	static Vector<Ref<VideoStream>> decoders;
+	static Vector<String> extensions;
+	static HashMap<String, Vector<Ref<VideoStream>>> decoder_support;
 
-void initialize_theora_module(ModuleInitializationLevel p_level) {
-	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
-		return;
-	}
+protected:
+	static VideoDecoderServer *singleton;
+	static Ref<ResourceFormatLoader> resource_format_loader;
 
-	GDREGISTER_CLASS(VideoStreamTheora);
-	theora_decoder_ref.instantiate();
-	VideoDecoderServer::add_interface(theora_decoder_ref);
-}
+	static void _bind_methods();
+	static void register_resource_loader();
+	static void unregister_resource_loader();
+	static void reload_resource_loader();
 
-void uninitialize_theora_module(ModuleInitializationLevel p_level) {
-	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
-		return;
-	}
+	inline static bool is_created = false;
 
-	if (theora_decoder_ref.is_valid()) {
+	static void create();
+	static void destroy();
 
-		VideoDecoderServer::remove_interface(theora_decoder_ref);
-		theora_decoder_ref.unref();
-	}
-}
+public:
+	static VideoDecoderServer *get_singleton();
+
+	static String get_extension_name(const String &ext);
+	static Vector<String> get_recognized_extensions();
+
+	static void add_interface(const Ref<VideoStream> &extension_stream);
+	static void remove_interface(const Ref<VideoStream> &extension_stream);
+
+	static Ref<VideoStream> instantiate_stream_for_extension(const String &extension);
+
+	VideoDecoderServer();
+
+	virtual ~VideoDecoderServer();
+};
+
+#endif // VIDEO_DECODER_SERVER_H

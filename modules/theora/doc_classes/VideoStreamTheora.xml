@@ -9,6 +9,7 @@
 	</description>
 	<tutorials>
 	</tutorials>
+<<<<<<< HEAD
 	<methods>
 		<method name="get_file">
 			<return type="String" />
@@ -24,4 +25,6 @@
 			</description>
 		</method>
 	</methods>
+=======
+>>>>>>> a781e1f6ca (Updates VideoDecoder plugin API to GDExtension.)
 </class>
