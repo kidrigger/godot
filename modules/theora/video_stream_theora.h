@@ -37,7 +37,7 @@
 #include "core/os/thread.h"
 #include "core/templates/ring_buffer.h"
 #include "core/templates/safe_refcount.h"
-#include "scene/resources/video_stream.h"
+#include "scene/video/video_stream.h"
 #include "servers/audio_server.h"
 
 #include <theora/theoradec.h>
@@ -56,8 +56,6 @@ class VideoStreamPlaybackTheora : public VideoStreamPlayback {
 	Image::Format format = Image::Format::FORMAT_L8;
 	Vector<uint8_t> frame_data;
 	int frames_pending = 0;
-	Ref<FileAccess> file;
-	String file_name;
 	int audio_frames_wrote = 0;
 	Point2i size;
 
@@ -99,8 +97,6 @@ class VideoStreamPlaybackTheora : public VideoStreamPlayback {
 
 	Ref<ImageTexture> texture;
 
-	AudioMixCallback mix_callback = nullptr;
-	void *mix_udata = nullptr;
 	bool paused = false;
 
 #ifdef THEORA_USE_THREAD_STREAMING
@@ -150,7 +146,6 @@ public:
 	virtual Ref<Texture2D> get_texture() const override;
 	virtual void update(double p_delta) override;
 
-	virtual void set_mix_callback(AudioMixCallback p_callback, void *p_userdata) override;
 	virtual int get_channels() const override;
 	virtual int get_mix_rate() const override;
 
@@ -163,9 +158,6 @@ public:
 class VideoStreamTheora : public VideoStream {
 	GDCLASS(VideoStreamTheora, VideoStream);
 
-	String file;
-	int audio_track;
-
 protected:
 	static void _bind_methods();
 
@@ -177,8 +169,7 @@ public:
 		return pb;
 	}
 
-	void set_file(const String &p_file) { file = p_file; }
-	String get_file() { return file; }
+	PackedStringArray get_supported_extensions() const override { return { "ogv" }; }
 	void set_audio_track(int p_track) override { audio_track = p_track; }
 
 	VideoStreamTheora() { audio_track = 0; }

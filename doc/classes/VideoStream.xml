@@ -8,4 +8,48 @@
 	</description>
 	<tutorials>
 	</tutorials>
+	<methods>
+		<method name="_cleanup" qualifiers="virtual">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="_get_plugin_name" qualifiers="virtual const">
+			<return type="String" />
+			<description>
+			</description>
+		</method>
+		<method name="_get_supported_extensions" qualifiers="virtual const">
+			<return type="PackedStringArray" />
+			<description>
+			</description>
+		</method>
+		<method name="_initialize" qualifiers="virtual">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="_instantiate_playback" qualifiers="virtual">
+			<return type="Object" />
+			<description>
+			</description>
+		</method>
+		<method name="get_file">
+			<return type="String" />
+			<description>
+			</description>
+		</method>
+		<method name="set_audio_track">
+			<return type="void" />
+			<param index="0" name="track" type="int" />
+			<description>
+			</description>
+		</method>
+		<method name="set_file">
+			<return type="void" />
+			<param index="0" name="file" type="String" />
+			<description>
+			</description>
+		</method>
+	</methods>
 </class>

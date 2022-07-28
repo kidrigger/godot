@@ -204,7 +204,6 @@
 #include "scene/resources/texture.h"
 #include "scene/resources/theme.h"
 #include "scene/resources/tile_set.h"
-#include "scene/resources/video_stream.h"
 #include "scene/resources/visual_shader.h"
 #include "scene/resources/visual_shader_nodes.h"
 #include "scene/resources/visual_shader_particle_nodes.h"
@@ -215,6 +214,7 @@
 #include "scene/resources/world_boundary_shape_3d.h"
 #include "scene/scene_string_names.h"
 #include "scene/theme/theme_db.h"
+#include "scene/video/video_stream.h"
 
 #include "scene/main/shader_globals_override.h"
 
@@ -398,6 +398,9 @@ void register_scene_types() {
 
 	GDREGISTER_CLASS(LineEdit);
 	GDREGISTER_CLASS(VideoStreamPlayer);
+	GDREGISTER_VIRTUAL_CLASS(VideoStreamPlayback);
+	GDREGISTER_VIRTUAL_CLASS(VideoStream);
+	GDREGISTER_VIRTUAL_CLASS(VideoStreamLoader);
 
 #ifndef ADVANCED_GUI_DISABLED
 	GDREGISTER_CLASS(FileDialog);
@@ -916,7 +919,6 @@ void register_scene_types() {
 #ifndef _3D_DISABLED
 	GDREGISTER_CLASS(AudioStreamPlayer3D);
 #endif
-	GDREGISTER_ABSTRACT_CLASS(VideoStream);
 	GDREGISTER_CLASS(AudioStreamWAV);
 
 	OS::get_singleton()->yield(); // may take time to init

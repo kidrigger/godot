@@ -39,10 +39,12 @@ void initialize_theora_module(ModuleInitializationLevel p_level) {
 		return;
 	}
 
+	GDREGISTER_CLASS(VideoStreamLoader);
 	resource_loader_theora.instantiate();
 	ResourceLoader::add_resource_format_loader(resource_loader_theora, true);
 
 	GDREGISTER_CLASS(VideoStreamTheora);
+	GDREGISTER_CLASS(VideoStreamPlaybackTheora);
 }
 
 void uninitialize_theora_module(ModuleInitializationLevel p_level) {

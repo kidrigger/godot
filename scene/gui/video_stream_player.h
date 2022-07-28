@@ -32,7 +32,7 @@
 #define VIDEO_STREAM_PLAYER_H
 
 #include "scene/gui/control.h"
-#include "scene/resources/video_stream.h"
+#include "scene/video/video_stream.h"
 #include "servers/audio/audio_rb_resampler.h"
 #include "servers/audio_server.h"
 

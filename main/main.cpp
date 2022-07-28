@@ -2322,6 +2322,7 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 		}
 	}
 
+	// init the Video decoder server
 	camera_server = CameraServer::create();
 
 	MAIN_PRINT("Main: Load Physics");
